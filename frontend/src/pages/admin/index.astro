@@ -1,0 +1,12 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+<AdminLayout title="Login — WhatsUpShop Admin" currentPage="">
+  <!-- Login is handled by the AdminLayout auth gate -->
+  <!-- If authenticated, redirect to dashboard -->
+  <script is:inline>
+    if (localStorage.getItem('admin_token')) {
+      window.location.href = '/admin/dashboard';
+    }
+  </script>
+</AdminLayout>

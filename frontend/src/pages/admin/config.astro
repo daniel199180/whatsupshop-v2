@@ -1,0 +1,179 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+<AdminLayout title="Configuración — WhatsUpShop Admin" currentPage="config">
+  <div x-data="configPage()" x-init="load()">
+    <!-- Page header -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Configuración</h1>
+      <p class="text-gray-500 text-sm mt-1">Ajustes generales de tu tienda</p>
+    </div>
+
+    <!-- Config form -->
+    <div class="max-w-2xl space-y-6">
+      <!-- Store Info -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-[#25D366]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" /></svg>
+          Información de la tienda
+        </h2>
+        <div class="space-y-4">
+          <div>
+            <label class="admin-label">Nombre de la tienda</label>
+            <input type="text" x-model="configs.store_name" class="admin-input" placeholder="Mi Tienda" />
+          </div>
+          <div>
+            <label class="admin-label">Número de WhatsApp</label>
+            <div class="flex items-center gap-2">
+              <div class="w-10 h-10 bg-[#25D366]/10 rounded-lg flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /></svg>
+              </div>
+              <input type="text" x-model="configs.whatsapp_number" class="admin-input" placeholder="584121234567" />
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Incluye el código de país sin el + (ej: 584121234567)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Currency -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-[#25D366]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          Moneda
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="admin-label">Código de moneda</label>
+            <input type="text" x-model="configs.currency" class="admin-input" placeholder="USD" />
+          </div>
+          <div>
+            <label class="admin-label">Símbolo</label>
+            <input type="text" x-model="configs.currency_symbol" class="admin-input" placeholder="$" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom configs -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-gray-800 flex items-center gap-2">
+            <svg class="w-5 h-5 text-[#25D366]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /></svg>
+            Configuraciones adicionales
+          </h2>
+          <button @click="addCustom()" class="btn-secondary btn-sm">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Añadir
+          </button>
+        </div>
+        <template x-if="rawConfigs.length > 0">
+          <div class="space-y-3">
+            <template x-for="(cfg, index) in rawConfigs" :key="cfg.id || index">
+              <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <div class="flex-1 grid grid-cols-2 gap-2">
+                  <input type="text" :value="cfg.key" class="admin-input text-xs" placeholder="clave" readonly style="background:#e5e7eb;" />
+                  <input type="text" :value="cfg.value" class="admin-input text-xs" placeholder="valor" readonly />
+                </div>
+                <button @click="deleteConfig(cfg.id)" class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center hover:bg-red-100 shrink-0">
+                  <svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- Save button -->
+      <div class="flex justify-end">
+        <button @click="saveAll()" class="btn-primary" :disabled="saving">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+          <span x-text="saving ? 'Guardando...' : 'Guardar configuración'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    window.configPage = function() {
+      return {
+        configs: { store_name: '', whatsapp_number: '', currency: 'USD', currency_symbol: '$' },
+        rawConfigs: [],
+        loading: true,
+        saving: false,
+
+        async load() {
+          this.loading = true;
+          try {
+            const res = await apiFetch('/admin/config');
+            if (res.ok) {
+              const data = await res.json();
+              this.rawConfigs = data;
+              // Populate known fields
+              data.forEach(cfg => {
+                if (cfg.key in this.configs) {
+                  this.configs[cfg.key] = cfg.value;
+                }
+              });
+            }
+          } catch (e) { console.error(e); }
+          this.loading = false;
+        },
+
+        addCustom() {
+          const key = prompt('Clave de configuración:');
+          if (!key) return;
+          const value = prompt('Valor:');
+          if (value === null) return;
+          this.saveConfig(key, value);
+        },
+
+        async saveConfig(key, value) {
+          try {
+            const res = await apiFetch('/admin/config', {
+              method: 'POST',
+              body: JSON.stringify({ key, value }),
+            });
+            if (res.ok) {
+              showToast(`"${key}" guardado`);
+              await this.load();
+            } else {
+              showToast('Error al guardar', 'error');
+            }
+          } catch (e) {
+            showToast('Error al guardar', 'error');
+          }
+        },
+
+        async saveAll() {
+          this.saving = true;
+          try {
+            const promises = Object.entries(this.configs).map(([key, value]) =>
+              apiFetch('/admin/config', {
+                method: 'POST',
+                body: JSON.stringify({ key, value: String(value) }),
+              })
+            );
+            await Promise.all(promises);
+            showToast('Configuración guardada');
+            await this.load();
+          } catch (e) {
+            showToast('Error al guardar', 'error');
+          }
+          this.saving = false;
+        },
+
+        async deleteConfig(id) {
+          if (!confirm('¿Eliminar esta configuración?')) return;
+          try {
+            const res = await apiFetch(`/admin/config/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+              showToast('Configuración eliminada');
+              this.rawConfigs = this.rawConfigs.filter(c => c.id !== id);
+            }
+          } catch (e) {
+            showToast('Error al eliminar', 'error');
+          }
+        },
+      };
+    };
+  </script>
+</AdminLayout>

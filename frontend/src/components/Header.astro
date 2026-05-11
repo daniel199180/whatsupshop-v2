@@ -1,0 +1,53 @@
+---
+export interface Props {
+  storeName?: string;
+}
+const { storeName = 'EcoStore WhatsApp' } = Astro.props;
+---
+<header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 pt-4 pb-3" id="main-header">
+  <!-- Top row: Logo + Account -->
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center gap-2.5">
+      <!-- Store icon -->
+      <div class="w-8 h-8 bg-[#25D366]/10 rounded-lg flex items-center justify-center">
+        <svg class="w-5 h-5 text-[#25D366]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+        </svg>
+      </div>
+      <h1 class="font-bold text-gray-900 text-base sm:text-lg tracking-tight">{storeName}</h1>
+    </div>
+    <a href="/admin" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" aria-label="Mi cuenta">
+      <svg class="w-[18px] h-[18px] text-gray-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+      </svg>
+    </a>
+  </div>
+
+  <!-- Search bar -->
+  <div class="relative" id="search-container">
+    <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+    <input
+      id="search-input"
+      type="search"
+      placeholder="Buscar productos..."
+      autocomplete="off"
+      class="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-xl text-sm text-gray-700 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#25D366]/30 focus:bg-white transition-all border border-transparent focus:border-[#25D366]/20"
+    />
+  </div>
+</header>
+
+<script>
+  // Debounced search dispatcher
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  let searchTimeout: ReturnType<typeof setTimeout>;
+
+  searchInput?.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      const q = (e.target as HTMLInputElement).value;
+      document.dispatchEvent(new CustomEvent('search', { detail: { q } }));
+    }, 300);
+  });
+</script>

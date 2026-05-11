@@ -1,0 +1,35 @@
+{
+  "name": "whatsupshop-backend",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "db:generate": "bunx drizzle-kit generate",
+    "db:push": "bunx drizzle-kit push",
+    "db:studio": "bunx drizzle-kit studio",
+    "hash-password": "bunx @aspect-build/bun -e \"const bcrypt = require('bcrypt'); const hash = bcrypt.hashSync(process.argv[1], 12); console.log(hash);\"",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "devDependencies": {
+    "@libsql/client": "^0.17.3",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/bun": "latest",
+    "@types/jsonwebtoken": "^9.0.10",
+    "drizzle-kit": "^0.31.10"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@img/sharp-darwin-arm64": "^0.34.5",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.18",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.22.3",
+    "sharp": "^0.34.5",
+    "zod": "^4.4.3"
+  }
+}

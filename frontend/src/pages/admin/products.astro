@@ -1,0 +1,306 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+<AdminLayout title="Productos — WhatsUpShop Admin" currentPage="products">
+  <div x-data="productsPage()" x-init="load()">
+    <!-- Page header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Productos</h1>
+        <p class="text-gray-500 text-sm mt-1">Gestiona tu catálogo de productos</p>
+      </div>
+      <button @click="openCreate()" class="btn-primary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+        Nuevo producto
+      </button>
+    </div>
+
+    <!-- Products table -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Imagen</th>
+              <th>Producto</th>
+              <th>Precio</th>
+              <th>Categoría</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-if="loading">
+              <tr><td colspan="6" class="text-center py-12 text-gray-400">Cargando...</td></tr>
+            </template>
+            <template x-if="!loading && products.length === 0">
+              <tr><td colspan="6">
+                <div class="empty-state">
+                  <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                    <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+                  </div>
+                  <p class="text-gray-500 font-semibold text-sm">No hay productos</p>
+                  <p class="text-gray-400 text-xs mt-1">Crea tu primer producto</p>
+                </div>
+              </td></tr>
+            </template>
+            <template x-for="product in products" :key="product.id">
+              <tr>
+                <td>
+                  <img :src="product.thumbnail || product.imageUrl || '/placeholder.jpg'" :alt="product.title"
+                    class="w-12 h-12 rounded-xl object-cover bg-gray-100" onerror="this.src='/placeholder.jpg'" />
+                </td>
+                <td>
+                  <p class="font-semibold text-gray-800 text-sm" x-text="product.title"></p>
+                  <p class="text-gray-400 text-xs mt-0.5" x-text="'/product/' + product.slug"></p>
+                </td>
+                <td>
+                  <span class="font-bold text-gray-800" x-text="'$' + product.normalPrice.toFixed(2)"></span>
+                  <template x-if="product.discountPrice && product.discountPrice > 0 && product.discountPrice < product.normalPrice">
+                    <span class="block text-xs text-green-600 font-semibold" x-text="'Oferta: $' + product.discountPrice.toFixed(2)"></span>
+                  </template>
+                </td>
+                <td>
+                  <span class="badge badge-blue" x-text="product.category?.name || 'Sin categoría'"></span>
+                </td>
+                <td>
+                  <span class="badge" :class="product.isActive ? 'badge-green' : 'badge-gray'" x-text="product.isActive ? 'Activo' : 'Oculto'"></span>
+                </td>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <button @click="openEdit(product)" class="btn-secondary btn-sm">Editar</button>
+                    <button @click="deleteProduct(product.id)" class="btn-danger btn-sm">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div x-show="showModal" x-transition.opacity class="modal-overlay" @click.self="showModal = false" style="display: none;">
+      <div class="modal-content animate-fade-in-up" @click.stop>
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 class="font-bold text-lg text-gray-900" x-text="editingId ? 'Editar producto' : 'Nuevo producto'"></h2>
+          <button @click="showModal = false" class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <form @submit.prevent="saveProduct()" class="p-6 space-y-4">
+          <!-- Image upload -->
+          <div>
+            <label class="admin-label">Imagen del producto</label>
+            <div class="upload-area" @click="$refs.fileInput.click()" @dragover.prevent="$el.classList.add('dragover')" @dragleave="$el.classList.remove('dragover')" @drop.prevent="handleDrop($event)">
+              <template x-if="form.imageUrl">
+                <img :src="form.imageUrl" class="w-24 h-24 object-cover rounded-xl mx-auto mb-2" />
+              </template>
+              <template x-if="!form.imageUrl">
+                <div>
+                  <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" /></svg>
+                  <p class="text-sm text-gray-500">Haz clic o arrastra una imagen</p>
+                  <p class="text-xs text-gray-400 mt-1">JPG, PNG o WebP • Máx 10MB</p>
+                </div>
+              </template>
+              <input type="file" accept="image/jpeg,image/png,image/webp" x-ref="fileInput" @change="uploadImage($event)" class="hidden" />
+            </div>
+            <div x-show="uploading" class="text-sm text-[#25D366] mt-2 font-medium">Subiendo imagen...</div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="admin-label">Título *</label>
+              <input type="text" x-model="form.title" @input="autoSlug()" class="admin-input" placeholder="Zapatillas Recycled" required />
+            </div>
+            <div>
+              <label class="admin-label">Slug (URL)</label>
+              <input type="text" x-model="form.slug" class="admin-input" placeholder="zapatillas-recycled" required />
+            </div>
+          </div>
+
+          <div>
+            <label class="admin-label">Descripción *</label>
+            <textarea x-model="form.description" class="admin-textarea" placeholder="Descripción del producto..." required></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="admin-label">Precio normal *</label>
+              <input type="number" step="0.01" min="0" x-model.number="form.normalPrice" class="admin-input" placeholder="89.00" required />
+            </div>
+            <div>
+              <label class="admin-label">Precio oferta</label>
+              <input type="number" step="0.01" min="0" x-model.number="form.discountPrice" class="admin-input" placeholder="0.00" />
+            </div>
+            <div>
+              <label class="admin-label">Categoría</label>
+              <select x-model.number="form.categoryId" class="admin-input">
+                <option value="">Sin categoría</option>
+                <template x-for="cat in categories" :key="cat.id">
+                  <option :value="cat.id" x-text="cat.name"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" x-model="form.isActive" class="w-4 h-4 accent-[#25D366] rounded" />
+              <span class="text-sm text-gray-700 font-medium">Producto activo (visible en catálogo)</span>
+            </label>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
+            <button type="button" @click="showModal = false" class="btn-secondary">Cancelar</button>
+            <button type="submit" class="btn-primary" :disabled="saving">
+              <span x-text="saving ? 'Guardando...' : (editingId ? 'Guardar cambios' : 'Crear producto')"></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    window.productsPage = function() {
+      return {
+        products: [],
+        categories: [],
+        loading: true,
+        showModal: false,
+        editingId: null,
+        saving: false,
+        uploading: false,
+        form: {
+          title: '', slug: '', description: '', normalPrice: 0, discountPrice: 0,
+          imageUrl: '', imageFallback: '', thumbnail: '', categoryId: null, isActive: true,
+        },
+
+        async load() {
+          this.loading = true;
+          try {
+            const [prodRes, catRes] = await Promise.all([
+              apiFetch('/admin/products'),
+              apiFetch('/admin/categories'),
+            ]);
+            this.products = prodRes.ok ? await prodRes.json() : [];
+            this.categories = catRes.ok ? (await catRes.json()).map(c => ({ id: c.id, name: c.name })) : [];
+          } catch (e) { console.error(e); }
+          this.loading = false;
+        },
+
+        openCreate() {
+          this.editingId = null;
+          this.form = {
+            title: '', slug: '', description: '', normalPrice: 0, discountPrice: 0,
+            imageUrl: '', imageFallback: '', thumbnail: '', categoryId: null, isActive: true,
+          };
+          this.showModal = true;
+        },
+
+        openEdit(product) {
+          this.editingId = product.id;
+          this.form = {
+            title: product.title,
+            slug: product.slug,
+            description: product.description,
+            normalPrice: product.normalPrice,
+            discountPrice: product.discountPrice || 0,
+            imageUrl: product.imageUrl || '',
+            imageFallback: product.imageFallback || '',
+            thumbnail: product.thumbnail || '',
+            categoryId: product.categoryId,
+            isActive: product.isActive,
+          };
+          this.showModal = true;
+        },
+
+        autoSlug() {
+          if (!this.editingId) {
+            this.form.slug = this.form.title
+              .toLowerCase()
+              .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-|-$/g, '');
+          }
+        },
+
+        async uploadImage(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+          this.uploading = true;
+          try {
+            const formData = new FormData();
+            formData.append('image', file);
+            const res = await apiFetch('/uploads', { method: 'POST', body: formData });
+            if (res.ok) {
+              const data = await res.json();
+              this.form.imageUrl = data.imageUrl;
+              this.form.imageFallback = data.imageFallback;
+              this.form.thumbnail = data.thumbnail;
+              showToast('Imagen subida correctamente');
+            } else {
+              const err = await res.json();
+              showToast(err.error || 'Error al subir imagen', 'error');
+            }
+          } catch (e) {
+            showToast('Error al subir imagen', 'error');
+          }
+          this.uploading = false;
+        },
+
+        handleDrop(event) {
+          event.target.classList.remove('dragover');
+          const file = event.dataTransfer.files[0];
+          if (file) {
+            this.$refs.fileInput.files = event.dataTransfer.files;
+            this.uploadImage({ target: { files: [file] } });
+          }
+        },
+
+        async saveProduct() {
+          this.saving = true;
+          try {
+            const body = { ...this.form };
+            if (!body.categoryId) body.categoryId = null;
+            if (!body.discountPrice) body.discountPrice = 0;
+
+            const url = this.editingId ? `/admin/products/${this.editingId}` : '/admin/products';
+            const method = this.editingId ? 'PUT' : 'POST';
+
+            const res = await apiFetch(url, { method, body: JSON.stringify(body) });
+            const data = await res.json();
+
+            if (res.ok) {
+              showToast(this.editingId ? 'Producto actualizado' : 'Producto creado');
+              this.showModal = false;
+              await this.load();
+            } else {
+              showToast(data.error || 'Error al guardar', 'error');
+            }
+          } catch (e) {
+            showToast('Error al guardar producto', 'error');
+          }
+          this.saving = false;
+        },
+
+        async deleteProduct(id) {
+          if (!confirm('¿Estás seguro de eliminar este producto?')) return;
+          try {
+            const res = await apiFetch(`/admin/products/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+              showToast('Producto eliminado');
+              this.products = this.products.filter(p => p.id !== id);
+            } else {
+              showToast('Error al eliminar', 'error');
+            }
+          } catch (e) {
+            showToast('Error al eliminar', 'error');
+          }
+        },
+      };
+    };
+  </script>
+</AdminLayout>

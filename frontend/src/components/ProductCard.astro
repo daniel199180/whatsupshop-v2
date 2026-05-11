@@ -1,0 +1,88 @@
+---
+export interface Props {
+  id: number;
+  slug: string;
+  title: string;
+  normalPrice: number;
+  discountPrice?: number;
+  imageUrl?: string;
+  thumbnail?: string;
+  categoryId?: number;
+  currency?: string;
+}
+const { id, slug, title, normalPrice, discountPrice, imageUrl, thumbnail, categoryId, currency = 'USD' } = Astro.props;
+const hasDiscount = discountPrice && discountPrice > 0 && discountPrice < normalPrice;
+const displayPrice = hasDiscount ? discountPrice : normalPrice;
+const discountPct = hasDiscount ? Math.round(100 - (discountPrice! / normalPrice) * 100) : 0;
+const imgSrc = thumbnail || imageUrl || '/placeholder.jpg';
+---
+<div
+  data-product-cat={categoryId?.toString() || 'null'}
+  class="product-card bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 animate-fade-in-up"
+  style="transition: opacity 0.2s, transform 0.2s;"
+>
+  <!-- Image + Favorite -->
+  <a href={`/product/${slug}`} class="block">
+    <div class="relative aspect-square overflow-hidden bg-gray-50">
+      <img
+        src={imgSrc}
+        alt={title}
+        loading="lazy"
+        class="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+        onerror="this.style.display='none'; this.parentElement.classList.add('img-placeholder');"
+      />
+      {hasDiscount && (
+        <span class="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+          -{discountPct}%
+        </span>
+      )}
+      <!-- Favorite button -->
+      <button
+        class="absolute top-2 right-2 w-7 h-7 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm group/fav"
+        onclick="event.preventDefault(); event.stopPropagation(); this.classList.toggle('is-fav');"
+        aria-label="Marcar como favorito"
+      >
+        <svg class="w-4 h-4 text-gray-400 group-[.is-fav]/fav:text-red-500 group-[.is-fav]/fav:fill-red-500 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+        </svg>
+      </button>
+    </div>
+  </a>
+
+  <!-- Product Info -->
+  <div class="p-3 pb-2">
+    <a href={`/product/${slug}`} class="block">
+      <p class="text-sm text-gray-800 font-medium leading-snug line-clamp-2 min-h-[2.5em]">{title}</p>
+    </a>
+    <div class="flex items-baseline gap-1.5 mt-1.5">
+      <span class="text-gray-900 font-bold text-sm">${displayPrice?.toFixed(2)}</span>
+      <span class="text-gray-400 text-xs font-medium">{currency}</span>
+      {hasDiscount && (
+        <span class="text-gray-400 text-xs line-through ml-auto">${normalPrice.toFixed(2)}</span>
+      )}
+    </div>
+  </div>
+
+  <!-- Add to Cart button -->
+  <div class="px-3 pb-3">
+    <button
+      class="w-full py-2.5 bg-[#25D366] hover:bg-[#128C7E] text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-all duration-200 btn-press shadow-sm hover:shadow-md hover:shadow-[#25D366]/20"
+      onclick={`window.addToCart(${JSON.stringify({id, slug, title, price: displayPrice, imageUrl: imgSrc})})`}
+      id={`add-to-cart-${id}`}
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+      </svg>
+      Añadir
+    </button>
+  </div>
+</div>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

@@ -1,0 +1,197 @@
+---
+export interface Props {
+  whatsappNumber: string;
+  currency?: string;
+}
+const { whatsappNumber, currency = 'BOB' } = Astro.props;
+---
+<!-- Cart Bar: Alpine.js state persisted in localStorage -->
+<div
+  x-data="cart()"
+  x-init="init()"
+  class="cart-bar-container"
+>
+  <!-- Floating Cart Bar -->
+  <div
+    class="bg-white border-t border-gray-200 px-4 py-3 flex items-center gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
+    x-show="total > 0"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="translate-y-full opacity-0"
+    x-transition:enter-end="translate-y-0 opacity-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="translate-y-0 opacity-100"
+    x-transition:leave-end="translate-y-full opacity-0"
+    id="cart-bar"
+  >
+    <!-- Cart icon with badge -->
+    <div class="relative shrink-0">
+      <div class="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center">
+        <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+        </svg>
+      </div>
+      <span
+        class="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 bg-[#25D366] text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1"
+        x-text="itemCount()"
+      ></span>
+    </div>
+
+    <!-- Total -->
+    <div class="flex-1 min-w-0">
+      <p class="text-[10px] text-gray-400 uppercase font-semibold tracking-widest">TOTAL</p>
+      <div class="flex items-baseline gap-1.5">
+        <p class="text-gray-900 font-extrabold text-lg leading-none" x-text="total.toFixed(2)"></p>
+        <p class="text-gray-400 text-xs font-medium">{currency}</p>
+      </div>
+    </div>
+
+    <!-- View Cart -->
+    <button
+      @click="showCart = !showCart"
+      class="px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all btn-press whitespace-nowrap"
+      id="view-cart-btn"
+    >
+      <span x-text="showCart ? 'Ocultar' : 'Ver carrito'"></span>
+    </button>
+
+    <!-- WhatsApp Checkout -->
+    <button
+      @click="checkout()"
+      class="px-4 py-2.5 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all btn-press shadow-md shadow-[#25D366]/25 whitespace-nowrap"
+      id="checkout-btn"
+    >
+      <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.12 1.532 5.845L.057 23.451a.75.75 0 00.919.919l5.605-1.475A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75c-1.9 0-3.7-.504-5.25-1.386l-.375-.22-3.887 1.02 1.04-3.8-.24-.39A9.718 9.718 0 012.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+      </svg>
+      Pedir por WhatsApp
+    </button>
+  </div>
+
+  <!-- Cart Detail Drawer -->
+  <div
+    x-show="showCart && total > 0"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0 -translate-y-2"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100 translate-y-0"
+    x-transition:leave-end="opacity-0 -translate-y-2"
+    class="bg-white border-t border-gray-100 max-h-72 overflow-y-auto"
+    id="cart-drawer"
+  >
+    <!-- Drawer header -->
+    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-sm">
+      <h3 class="font-bold text-sm text-gray-800">Tu pedido</h3>
+      <button @click="clearCart()" class="text-red-400 text-xs font-semibold hover:text-red-600 transition-colors">
+        Vaciar todo
+      </button>
+    </div>
+
+    <!-- Cart items -->
+    <template x-for="item in items" :key="item.id">
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+        <img
+          :src="item.imageUrl"
+          :alt="item.title"
+          class="w-12 h-12 rounded-xl object-cover bg-gray-100 shrink-0"
+          onerror="this.src='/placeholder.jpg'"
+        />
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-800 truncate" x-text="item.title"></p>
+          <p class="text-xs text-[#25D366] font-bold mt-0.5" x-text="'$' + (item.price * item.qty).toFixed(2)"></p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            @click="removeOne(item.id)"
+            class="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold text-sm flex items-center justify-center hover:bg-gray-200 transition-colors btn-press"
+          >−</button>
+          <span class="text-sm font-bold text-gray-800 w-5 text-center" x-text="item.qty"></span>
+          <button
+            @click="addOne(item.id)"
+            class="w-7 h-7 rounded-full bg-[#25D366] text-white font-bold text-sm flex items-center justify-center hover:bg-[#128C7E] transition-colors btn-press"
+          >+</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+
+<script is:inline define:vars={{ whatsappNumber }}>
+  window.cart = function() {
+    return {
+      items: [],
+      total: 0,
+      showCart: false,
+
+      init() {
+        this.items = JSON.parse(localStorage.getItem('cart') || '[]');
+        this.recalc();
+
+        // Global addToCart function
+        window.addToCart = (product) => {
+          const existing = this.items.find(i => i.id === product.id);
+          if (existing) {
+            existing.qty++;
+          } else {
+            this.items.push({ ...product, qty: 1 });
+          }
+          this.save();
+
+          // Visual feedback — briefly flash the cart bar
+          const bar = document.getElementById('cart-bar');
+          if (bar) {
+            bar.style.transition = 'transform 0.15s ease';
+            bar.style.transform = 'scale(1.02)';
+            setTimeout(() => { bar.style.transform = 'scale(1)'; }, 150);
+          }
+        };
+      },
+
+      itemCount() {
+        return this.items.reduce((sum, i) => sum + i.qty, 0);
+      },
+
+      recalc() {
+        this.total = this.items.reduce((sum, i) => sum + i.price * i.qty, 0);
+      },
+
+      save() {
+        localStorage.setItem('cart', JSON.stringify(this.items));
+        this.recalc();
+      },
+
+      addOne(id) {
+        const item = this.items.find(i => i.id === id);
+        if (item) { item.qty++; this.save(); }
+      },
+
+      removeOne(id) {
+        const item = this.items.find(i => i.id === id);
+        if (!item) return;
+        item.qty--;
+        if (item.qty <= 0) this.items = this.items.filter(i => i.id !== id);
+        this.save();
+      },
+
+      clearCart() {
+        this.items = [];
+        this.save();
+        this.showCart = false;
+      },
+
+      checkout() {
+        if (this.items.length === 0) return;
+        let message = '🛍️ *NUEVO PEDIDO*\n\n';
+        this.items.forEach(item => {
+          message += `• ${item.title} x${item.qty} — $${(item.price * item.qty).toFixed(2)}\n`;
+        });
+        message += `\n*TOTAL: $${this.total.toFixed(2)}*`;
+
+        const phone = whatsappNumber.replace(/\D/g, '');
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+      }
+    };
+  }
+</script>

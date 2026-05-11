@@ -1,0 +1,73 @@
+---
+export interface Props {
+  categories: Array<{ id: number; name: string }>;
+}
+const { categories } = Astro.props;
+---
+<nav class="px-4 py-3 overflow-visible" id="category-filter" aria-label="Filtro por categorías">
+  <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+    <button
+      data-cat="all"
+      class="category-btn active shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200"
+      onclick="filterCategory('all', this)"
+    >
+      Todos
+    </button>
+    {categories.map(cat => (
+      <button
+        data-cat={cat.id}
+        class="category-btn shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200"
+        onclick={`filterCategory('${cat.id}', this)`}
+      >
+        {cat.name}
+      </button>
+    ))}
+  </div>
+</nav>
+
+<style>
+  .category-btn {
+    background: #fff;
+    color: #4b5563;
+    border: 1.5px solid #e5e7eb;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .category-btn:hover {
+    border-color: #25D366;
+    color: #25D366;
+  }
+  .category-btn.active {
+    background: #25D366;
+    color: #fff;
+    border-color: #25D366;
+    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+  }
+</style>
+
+<script>
+  function filterCategory(catId: string, btn: HTMLElement) {
+    // Update active button
+    document.querySelectorAll('.category-btn').forEach(b => {
+      b.classList.remove('active');
+    });
+    btn.classList.add('active');
+
+    // Filter products in the grid
+    document.querySelectorAll('[data-product-cat]').forEach(card => {
+      const el = card as HTMLElement;
+      if (catId === 'all' || el.dataset.productCat === catId) {
+        el.style.display = '';
+        el.style.opacity = '1';
+        el.style.transform = 'scale(1)';
+      } else {
+        el.style.opacity = '0';
+        el.style.transform = 'scale(0.95)';
+        setTimeout(() => { el.style.display = 'none'; }, 200);
+      }
+    });
+  }
+
+  // Make globally available
+  (window as any).filterCategory = filterCategory;
+</script>

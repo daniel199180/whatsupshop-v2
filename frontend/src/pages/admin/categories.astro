@@ -1,0 +1,152 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+<AdminLayout title="Categorías — WhatsUpShop Admin" currentPage="categories">
+  <div x-data="categoriesPage()" x-init="load()">
+    <!-- Page header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Categorías</h1>
+        <p class="text-gray-500 text-sm mt-1">Organiza tu catálogo por categorías</p>
+      </div>
+      <button @click="openCreate()" class="btn-primary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+        Nueva categoría
+      </button>
+    </div>
+
+    <!-- Categories grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <template x-if="loading">
+        <div class="col-span-full text-center py-12 text-gray-400">Cargando...</div>
+      </template>
+      <template x-if="!loading && categories.length === 0">
+        <div class="col-span-full">
+          <div class="empty-state bg-white rounded-2xl border border-gray-100">
+            <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+              <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /></svg>
+            </div>
+            <p class="text-gray-500 font-semibold text-sm">No hay categorías</p>
+            <p class="text-gray-400 text-xs mt-1">Crea tu primera categoría</p>
+          </div>
+        </div>
+      </template>
+      <template x-for="cat in categories" :key="cat.id">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /></svg>
+              </div>
+              <h3 class="font-bold text-gray-800" x-text="cat.name"></h3>
+              <p class="text-xs text-gray-500 mt-1">
+                <span x-text="cat.productCount || 0"></span> productos
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <button @click="openEdit(cat)" class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" title="Editar">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
+              </button>
+              <button @click="deleteCategory(cat.id, cat.name)" class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center hover:bg-red-100 transition-colors" title="Eliminar">
+                <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div x-show="showModal" x-transition.opacity class="modal-overlay" @click.self="showModal = false" style="display: none;">
+      <div class="modal-content animate-fade-in-up" @click.stop style="max-width: 420px;">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 class="font-bold text-lg text-gray-900" x-text="editingId ? 'Editar categoría' : 'Nueva categoría'"></h2>
+          <button @click="showModal = false" class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <form @submit.prevent="save()" class="p-6 space-y-4">
+          <div>
+            <label class="admin-label">Nombre de la categoría *</label>
+            <input type="text" x-model="form.name" class="admin-input" placeholder="Electrónica, Hogar, Ropa..." required autofocus />
+          </div>
+          <div class="flex justify-end gap-3 pt-2">
+            <button type="button" @click="showModal = false" class="btn-secondary">Cancelar</button>
+            <button type="submit" class="btn-primary" :disabled="saving">
+              <span x-text="saving ? 'Guardando...' : (editingId ? 'Guardar' : 'Crear')"></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    window.categoriesPage = function() {
+      return {
+        categories: [],
+        loading: true,
+        showModal: false,
+        editingId: null,
+        saving: false,
+        form: { name: '' },
+
+        async load() {
+          this.loading = true;
+          try {
+            const res = await apiFetch('/admin/categories');
+            this.categories = res.ok ? await res.json() : [];
+          } catch (e) { console.error(e); }
+          this.loading = false;
+        },
+
+        openCreate() {
+          this.editingId = null;
+          this.form = { name: '' };
+          this.showModal = true;
+        },
+
+        openEdit(cat) {
+          this.editingId = cat.id;
+          this.form = { name: cat.name };
+          this.showModal = true;
+        },
+
+        async save() {
+          this.saving = true;
+          try {
+            const url = this.editingId ? `/admin/categories/${this.editingId}` : '/admin/categories';
+            const method = this.editingId ? 'PUT' : 'POST';
+            const res = await apiFetch(url, { method, body: JSON.stringify(this.form) });
+            const data = await res.json();
+            if (res.ok) {
+              showToast(this.editingId ? 'Categoría actualizada' : 'Categoría creada');
+              this.showModal = false;
+              await this.load();
+            } else {
+              showToast(data.error || 'Error al guardar', 'error');
+            }
+          } catch (e) {
+            showToast('Error al guardar categoría', 'error');
+          }
+          this.saving = false;
+        },
+
+        async deleteCategory(id, name) {
+          if (!confirm(`¿Eliminar la categoría "${name}"?`)) return;
+          try {
+            const res = await apiFetch(`/admin/categories/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+              showToast('Categoría eliminada');
+              this.categories = this.categories.filter(c => c.id !== id);
+            } else {
+              showToast('Error al eliminar', 'error');
+            }
+          } catch (e) {
+            showToast('Error al eliminar', 'error');
+          }
+        },
+      };
+    };
+  </script>
+</AdminLayout>
