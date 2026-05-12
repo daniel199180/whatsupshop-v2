@@ -16,7 +16,8 @@ import {
 
 export const admin = new Hono();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+// Guaranteed non-empty by startup validation in index.ts
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 // ─── Login (Public, with strict rate limit) ───────────────────────────
 admin.post(

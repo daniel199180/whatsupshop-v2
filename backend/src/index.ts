@@ -10,6 +10,16 @@ import { orders } from './routes/orders';
 import { uploads } from './routes/uploads';
 import { config } from './routes/config';
 
+// ─── Startup Validation ───────────────────────────────────────────────
+// Fail immediately so EasyPanel marks the container as unhealthy instead
+// of silently running with insecure defaults.
+const REQUIRED_ENV = ['JWT_SECRET', 'ADMIN_PASSWORD_HASH', 'DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'] as const;
+const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
+if (missing.length > 0) {
+  console.error(`[FATAL] Missing required environment variables: ${missing.join(', ')}`);
+  process.exit(1);
+}
+
 const app = new Hono();
 
 // ─── Global Middlewares ───────────────────────────────────────────────

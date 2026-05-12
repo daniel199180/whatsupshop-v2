@@ -1,7 +1,8 @@
 import type { Context, Next } from 'hono';
 import { verify } from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+// Guaranteed non-empty by startup validation in index.ts
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 export const authMiddleware = async (c: Context, next: Next) => {
   // Skip auth for login route

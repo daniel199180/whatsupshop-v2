@@ -1,20 +1,18 @@
 import { cors } from 'hono/cors';
 
-/**
- * CORS Middleware — Configurable per environment.
- * In production, restrict to the frontend domain only.
- * Falls back to permissive mode for local development.
- */
 const ALLOWED_ORIGINS = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
   : ['http://localhost:4321', 'http://localhost:3000'];
 
+// When CORS_ORIGIN is set we're in production: reject originless requests
+// (curl/scripts). In dev, allow them so local tooling keeps working.
+const IS_PRODUCTION = !!process.env.CORS_ORIGIN;
+
 export const corsMiddleware = cors({
   origin: (origin) => {
-    // Allow requests with no origin (e.g. server-to-server, curl)
-    if (!origin) return '*';
+    if (!origin) return IS_PRODUCTION ? null : '*';
     if (ALLOWED_ORIGINS.includes(origin)) return origin;
-    return ALLOWED_ORIGINS[0]!; // Deny by defaulting to first allowed origin
+    return null; // explicit reject for unknown origins
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],

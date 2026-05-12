@@ -13,7 +13,6 @@
     "typecheck": "bunx tsc --noEmit"
   },
   "devDependencies": {
-    "@libsql/client": "^0.17.3",
     "@types/bcryptjs": "^3.0.0",
     "@types/bun": "latest",
     "@types/jsonwebtoken": "^9.0.10",
@@ -23,7 +22,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@img/sharp-darwin-arm64": "^0.34.5",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.18",
