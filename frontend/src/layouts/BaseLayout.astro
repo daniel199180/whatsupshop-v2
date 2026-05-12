@@ -9,6 +9,11 @@ const { title = 'Catálogo WhatsApp', description = 'Tu tienda de confianza — 
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script is:inline>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
   <meta name="description" content={description} />

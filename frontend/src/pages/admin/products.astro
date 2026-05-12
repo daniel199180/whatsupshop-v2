@@ -3,6 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 <AdminLayout title="Productos — WhatsUpShop Admin" currentPage="products">
   <div x-data="productsPage()" x-init="load()">
+
     <!-- Page header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
       <div>
@@ -15,6 +16,52 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       </button>
     </div>
 
+    <!-- Filters -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Filtrar productos</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <!-- Search by name -->
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z" />
+          </svg>
+          <input type="text" x-model="filterName" placeholder="Buscar por nombre..." class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:border-[#25D366] outline-none transition-colors" />
+        </div>
+        <!-- Search by SKU -->
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75V16.5zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+          </svg>
+          <input type="text" x-model="filterSku" placeholder="Buscar por SKU..." class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:border-[#25D366] outline-none transition-colors" />
+        </div>
+        <!-- Filter by category -->
+        <select x-model="filterCategory" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:border-[#25D366] outline-none transition-colors text-gray-700">
+          <option value="">Todas las categorías</option>
+          <template x-for="cat in categories" :key="cat.id">
+            <option :value="cat.id" x-text="cat.name"></option>
+          </template>
+        </select>
+        <!-- Filter by status -->
+        <select x-model="filterStatus" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:border-[#25D366] outline-none transition-colors text-gray-700">
+          <option value="">Todos los estados</option>
+          <option value="active">Activos</option>
+          <option value="hidden">Ocultos</option>
+        </select>
+      </div>
+      <!-- Results count + clear -->
+      <div class="flex items-center justify-between mt-3" x-show="!loading">
+        <p class="text-xs text-gray-400">
+          <span class="font-semibold text-gray-600" x-text="filteredProducts().length"></span>
+          <span x-text="' de ' + products.length + ' producto(s)'"></span>
+        </p>
+        <button x-show="isFiltered()" @click="clearFilters()" class="text-xs text-gray-500 hover:text-gray-700 font-semibold flex items-center gap-1 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          Limpiar filtros
+        </button>
+      </div>
+    </div>
+
     <!-- Products table -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
@@ -23,6 +70,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             <tr>
               <th>Imagen</th>
               <th>Producto</th>
+              <th>SKU</th>
               <th>Precio</th>
               <th>Categoría</th>
               <th>Estado</th>
@@ -31,10 +79,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           </thead>
           <tbody>
             <template x-if="loading">
-              <tr><td colspan="6" class="text-center py-12 text-gray-400">Cargando...</td></tr>
+              <tr><td colspan="7" class="text-center py-12 text-gray-400">Cargando...</td></tr>
             </template>
             <template x-if="!loading && products.length === 0">
-              <tr><td colspan="6">
+              <tr><td colspan="7">
                 <div class="empty-state">
                   <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3">
                     <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
@@ -44,7 +92,14 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
                 </div>
               </td></tr>
             </template>
-            <template x-for="product in products" :key="product.id">
+            <template x-if="!loading && products.length > 0 && filteredProducts().length === 0">
+              <tr><td colspan="7" class="text-center py-10">
+                <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z" /></svg>
+                <p class="text-gray-500 text-sm font-semibold">Sin resultados</p>
+                <p class="text-gray-400 text-xs mt-1">Prueba con otros filtros</p>
+              </td></tr>
+            </template>
+            <template x-for="product in filteredProducts()" :key="product.id">
               <tr>
                 <td>
                   <img :src="product.thumbnail || product.imageUrl || '/placeholder.jpg'" :alt="product.title"
@@ -53,6 +108,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
                 <td>
                   <p class="font-semibold text-gray-800 text-sm" x-text="product.title"></p>
                   <p class="text-gray-400 text-xs mt-0.5" x-text="'/product/' + product.slug"></p>
+                </td>
+                <td>
+                  <span x-show="product.sku" class="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-mono rounded-lg" x-text="product.sku"></span>
+                  <span x-show="!product.sku" class="text-gray-300 text-xs">—</span>
                 </td>
                 <td>
                   <span class="font-bold text-gray-800" x-text="'$' + product.normalPrice.toFixed(2)"></span>
@@ -93,9 +152,20 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           <!-- Image upload -->
           <div>
             <label class="admin-label">Imagen del producto</label>
-            <div class="upload-area" @click="$refs.fileInput.click()" @dragover.prevent="$el.classList.add('dragover')" @dragleave="$el.classList.remove('dragover')" @drop.prevent="handleDrop($event)">
+
+            <!-- Drop / preview area -->
+            <div
+              class="upload-area"
+              @click="$refs.fileInput.click()"
+              @dragover.prevent="$el.classList.add('dragover')"
+              @dragleave="$el.classList.remove('dragover')"
+              @drop.prevent="handleDrop($event)"
+            >
               <template x-if="form.imageUrl">
-                <img :src="form.imageUrl" class="w-24 h-24 object-cover rounded-xl mx-auto mb-2" />
+                <div class="flex flex-col items-center gap-2">
+                  <img :src="form.imageUrl" class="w-28 h-28 object-cover rounded-xl" />
+                  <p class="text-xs text-gray-400">Haz clic para cambiar</p>
+                </div>
               </template>
               <template x-if="!form.imageUrl">
                 <div>
@@ -104,11 +174,47 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
                   <p class="text-xs text-gray-400 mt-1">JPG, PNG o WebP • Máx 10MB</p>
                 </div>
               </template>
-              <input type="file" accept="image/jpeg,image/png,image/webp" x-ref="fileInput" @change="uploadImage($event)" class="hidden" />
             </div>
-            <div x-show="uploading" class="text-sm text-[#25D366] mt-2 font-medium">Subiendo imagen...</div>
+
+            <!-- Action buttons -->
+            <div class="flex gap-2 mt-2">
+              <!-- Gallery picker -->
+              <button
+                type="button"
+                @click="$refs.fileInput.click()"
+                class="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                </svg>
+                Galería
+              </button>
+              <!-- Camera button — capture="environment" opens rear camera on mobile -->
+              <button
+                type="button"
+                @click="$refs.cameraInput.click()"
+                class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-900 hover:bg-gray-700 text-white rounded-xl text-sm font-semibold transition-all"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                </svg>
+                Cámara
+              </button>
+            </div>
+
+            <!-- Hidden inputs -->
+            <input type="file" accept="image/jpeg,image/png,image/webp" x-ref="fileInput" @change="uploadImage($event)" class="hidden" />
+            <input type="file" accept="image/*" capture="environment" x-ref="cameraInput" @change="uploadImage($event)" class="hidden" />
+
+            <!-- Upload progress -->
+            <div x-show="uploading" class="flex items-center gap-2 mt-2 text-sm text-[#25D366] font-medium">
+              <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+              Subiendo y comprimiendo imagen...
+            </div>
           </div>
 
+          <!-- Title + Slug -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="admin-label">Título *</label>
@@ -120,11 +226,20 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             </div>
           </div>
 
+          <!-- SKU -->
+          <div>
+            <label class="admin-label">SKU</label>
+            <input type="text" x-model="form.sku" class="admin-input font-mono" placeholder="ZAP-001" maxlength="100" />
+            <p class="text-xs text-gray-400 mt-1">Código único de identificación del producto (opcional)</p>
+          </div>
+
+          <!-- Description -->
           <div>
             <label class="admin-label">Descripción *</label>
             <textarea x-model="form.description" class="admin-textarea" placeholder="Descripción del producto..." required></textarea>
           </div>
 
+          <!-- Prices + Category -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label class="admin-label">Precio normal *</label>
@@ -145,6 +260,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             </div>
           </div>
 
+          <!-- Active -->
           <div class="flex items-center gap-3">
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" x-model="form.isActive" class="w-4 h-4 accent-[#25D366] rounded" />
@@ -173,8 +289,12 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         editingId: null,
         saving: false,
         uploading: false,
+        filterName: '',
+        filterSku: '',
+        filterCategory: '',
+        filterStatus: '',
         form: {
-          title: '', slug: '', description: '', normalPrice: 0, discountPrice: 0,
+          title: '', slug: '', sku: '', description: '', normalPrice: 0, discountPrice: 0,
           imageUrl: '', imageFallback: '', thumbnail: '', categoryId: null, isActive: true,
         },
 
@@ -191,10 +311,33 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           this.loading = false;
         },
 
+        filteredProducts() {
+          return this.products.filter(p => {
+            const matchName     = !this.filterName.trim()     || p.title.toLowerCase().includes(this.filterName.trim().toLowerCase());
+            const matchSku      = !this.filterSku.trim()      || (p.sku || '').toLowerCase().includes(this.filterSku.trim().toLowerCase());
+            const matchCategory = !this.filterCategory        || p.categoryId == this.filterCategory;
+            const matchStatus   = !this.filterStatus
+              || (this.filterStatus === 'active' && p.isActive)
+              || (this.filterStatus === 'hidden' && !p.isActive);
+            return matchName && matchSku && matchCategory && matchStatus;
+          });
+        },
+
+        isFiltered() {
+          return this.filterName.trim() || this.filterSku.trim() || this.filterCategory || this.filterStatus;
+        },
+
+        clearFilters() {
+          this.filterName = '';
+          this.filterSku = '';
+          this.filterCategory = '';
+          this.filterStatus = '';
+        },
+
         openCreate() {
           this.editingId = null;
           this.form = {
-            title: '', slug: '', description: '', normalPrice: 0, discountPrice: 0,
+            title: '', slug: '', sku: '', description: '', normalPrice: 0, discountPrice: 0,
             imageUrl: '', imageFallback: '', thumbnail: '', categoryId: null, isActive: true,
           };
           this.showModal = true;
@@ -203,16 +346,17 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         openEdit(product) {
           this.editingId = product.id;
           this.form = {
-            title: product.title,
-            slug: product.slug,
-            description: product.description,
-            normalPrice: product.normalPrice,
+            title:         product.title,
+            slug:          product.slug,
+            sku:           product.sku || '',
+            description:   product.description,
+            normalPrice:   product.normalPrice,
             discountPrice: product.discountPrice || 0,
-            imageUrl: product.imageUrl || '',
+            imageUrl:      product.imageUrl || '',
             imageFallback: product.imageFallback || '',
-            thumbnail: product.thumbnail || '',
-            categoryId: product.categoryId,
-            isActive: product.isActive,
+            thumbnail:     product.thumbnail || '',
+            categoryId:    product.categoryId,
+            isActive:      product.isActive,
           };
           this.showModal = true;
         },
@@ -221,7 +365,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           if (!this.editingId) {
             this.form.slug = this.form.title
               .toLowerCase()
-              .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+              .normalize('NFD').replace(/[̀-ͯ]/g, '')
               .replace(/[^a-z0-9]+/g, '-')
               .replace(/^-|-$/g, '');
           }
@@ -266,11 +410,12 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             const body = { ...this.form };
             if (!body.categoryId) body.categoryId = null;
             if (!body.discountPrice) body.discountPrice = 0;
+            if (!body.sku) body.sku = null;
 
-            const url = this.editingId ? `/admin/products/${this.editingId}` : '/admin/products';
+            const url    = this.editingId ? `/admin/products/${this.editingId}` : '/admin/products';
             const method = this.editingId ? 'PUT' : 'POST';
 
-            const res = await apiFetch(url, { method, body: JSON.stringify(body) });
+            const res  = await apiFetch(url, { method, body: JSON.stringify(body) });
             const data = await res.json();
 
             if (res.ok) {

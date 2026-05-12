@@ -82,6 +82,57 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         </template>
       </div>
 
+      <!-- Webhook -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h2 class="font-bold text-gray-800 mb-1 flex items-center gap-2">
+          <svg class="w-5 h-5 text-[#25D366]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+          Webhook de pedidos
+        </h2>
+        <p class="text-xs text-gray-400 mb-5">Cuando se reciba un pedido se enviará un POST con todos los datos a esta URL. Ideal para integrar con n8n.</p>
+
+        <!-- Enable toggle -->
+        <div class="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-xl">
+          <div>
+            <p class="text-sm font-semibold text-gray-700">Activar webhook</p>
+            <p class="text-xs text-gray-400 mt-0.5">Enviar datos del pedido automáticamente</p>
+          </div>
+          <button
+            @click="configs.webhook_enabled = configs.webhook_enabled === 'true' ? 'false' : 'true'"
+            class="relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none"
+            :class="configs.webhook_enabled === 'true' ? 'bg-[#25D366]' : 'bg-gray-200'"
+          >
+            <span
+              class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200"
+              :class="configs.webhook_enabled === 'true' ? 'translate-x-5' : 'translate-x-0'"
+            ></span>
+          </button>
+        </div>
+
+        <!-- Webhook URL -->
+        <div class="mb-4">
+          <label class="admin-label">URL del webhook</label>
+          <input
+            type="url"
+            x-model="configs.webhook_url"
+            class="admin-input font-mono text-sm"
+            placeholder="https://tu-n8n.com/webhook/abc123"
+          />
+          <p class="text-xs text-gray-400 mt-1">El webhook recibirá un POST con: orderId, customerName, customerPhone, items, total, createdAt, message.</p>
+        </div>
+
+        <!-- Test button -->
+        <button
+          @click="testWebhook()"
+          :disabled="!configs.webhook_url || testingWebhook"
+          class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        >
+          <svg class="w-4 h-4" :class="testingWebhook ? 'animate-spin' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
+          </svg>
+          <span x-text="testingWebhook ? 'Enviando...' : 'Probar webhook'"></span>
+        </button>
+      </div>
+
       <!-- Save button -->
       <div class="flex justify-end">
         <button @click="saveAll()" class="btn-primary" :disabled="saving">
@@ -95,10 +146,11 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   <script is:inline>
     window.configPage = function() {
       return {
-        configs: { store_name: '', whatsapp_number: '', currency: 'USD', currency_symbol: '$' },
+        configs: { store_name: '', whatsapp_number: '', currency: 'USD', currency_symbol: '$', webhook_url: '', webhook_enabled: 'false' },
         rawConfigs: [],
         loading: true,
         saving: false,
+        testingWebhook: false,
 
         async load() {
           this.loading = true;
@@ -172,6 +224,35 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           } catch (e) {
             showToast('Error al eliminar', 'error');
           }
+        },
+
+        async testWebhook() {
+          if (!this.configs.webhook_url) return;
+          this.testingWebhook = true;
+          const payload = {
+            orderId:       0,
+            customerName:  'Cliente de prueba',
+            customerPhone: '00000000',
+            items:         [{ id: 1, title: 'Producto de prueba', price: 99.00, qty: 1 }],
+            total:         99.00,
+            createdAt:     new Date().toISOString(),
+            message:       '🛍️ *PEDIDO DE PRUEBA*\n\n• Producto de prueba x1 — $99.00\n\n*TOTAL: $99.00*',
+          };
+          try {
+            const res = await fetch(this.configs.webhook_url, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify(payload),
+            });
+            if (res.ok) {
+              showToast('Webhook enviado correctamente ✓');
+            } else {
+              showToast(`Webhook respondió con error ${res.status}`, 'error');
+            }
+          } catch (e) {
+            showToast('No se pudo conectar con el webhook', 'error');
+          }
+          this.testingWebhook = false;
         },
       };
     };

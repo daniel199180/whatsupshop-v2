@@ -25,11 +25,12 @@ html {
 
 body {
   font-family: var(--font-family-sans);
-  background-color: var(--color-surface);
+  background-color: #ffffff;
   color: #1a1a1a;
   min-height: 100dvh;
   margin: 0;
   padding: 0;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 /* ─── Scrollbar (hide on mobile, minimal on desktop) ──────────────── */
@@ -66,8 +67,47 @@ body {
     border-right: 1px solid #e5e7eb;
   }
   body {
-    background-color: #e8e8e8;
+    background-color: #ffffff;
   }
+}
+
+/* ─── Dark Mode ──────────────────────────────────────────────────────── */
+html.dark body                    { background-color: #0f172a; color: #f1f5f9; }
+html.dark body.sm\:bg-adjusted    { background-color: #1e293b; }
+html.dark .app-shell              { background-color: #1e293b; border-color: #334155; }
+
+/* Header */
+html.dark #main-header            { background-color: rgba(30,41,59,0.97); border-color: #334155; }
+html.dark #search-input           { background-color: #334155; color: #f1f5f9; border-color: #475569; }
+html.dark #search-input::placeholder { color: #94a3b8; }
+
+/* Product cards */
+html.dark .product-card           { background-color: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+html.dark .product-card p         { color: #e2e8f0; }
+html.dark .product-card .text-gray-400 { color: #94a3b8; }
+
+/* Category filter */
+html.dark .category-btn           { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+html.dark .category-btn:hover     { border-color: #25D366; color: #25D366; }
+html.dark .category-btn.active    { background: #25D366; color: #fff; border-color: #25D366; }
+
+/* Cart bar */
+html.dark .cart-bar               { background-color: #1e293b; border-color: #334155; }
+
+/* Sections & misc */
+html.dark .bg-white               { background-color: #1e293b !important; }
+html.dark .bg-gray-50             { background-color: #0f172a !important; }
+html.dark .bg-gray-100            { background-color: #334155 !important; }
+html.dark .text-gray-900          { color: #f1f5f9 !important; }
+html.dark .text-gray-800          { color: #e2e8f0 !important; }
+html.dark .text-gray-700          { color: #cbd5e1 !important; }
+html.dark .text-gray-600          { color: #94a3b8 !important; }
+html.dark .text-gray-500          { color: #64748b !important; }
+html.dark .border-gray-100        { border-color: #334155 !important; }
+html.dark .border-gray-200        { border-color: #475569 !important; }
+
+@media (min-width: 640px) {
+  html.dark body { background-color: #0f172a; }
 }
 
 /* ─── Responsive grid: expand on larger screens ───────────────────── */

@@ -6,6 +6,7 @@ export const createProductSchema = z.object({
     .min(1, 'Slug is required')
     .max(100)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase with hyphens only'),
+  sku:   z.string().max(100).optional().nullable(),
   title: z.string().min(1, 'Title is required').max(300),
   description: z.string().min(1, 'Description is required'),
   normalPrice: z.number().positive('Price must be positive'),
@@ -30,7 +31,15 @@ export const updateCategorySchema = createCategorySchema;
 
 // ─── Order Validation ─────────────────────────────────────────────────
 export const createOrderSchema = z.object({
-  message: z.string().min(1, 'Order message is required'),
+  customerName:  z.string().min(1, 'Name is required').max(200),
+  customerPhone: z.string().min(1, 'Phone is required').max(50),
+  items:         z.array(z.object({
+    id:    z.union([z.string(), z.number()]),
+    title: z.string(),
+    price: z.number(),
+    qty:   z.number().int().positive(),
+  })).optional(),
+  message:       z.string().min(1, 'Order message is required'),
 });
 
 // ─── Config Validation ────────────────────────────────────────────────

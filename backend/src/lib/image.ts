@@ -25,25 +25,25 @@ export const processImage = async (buffer: Buffer, filename: string) => {
   const sharp = await getSharp();
   const mainImage = sharp(buffer).rotate(); // auto-rotate based on EXIF
 
-  // Main WebP image (Optimized for mobile)
+  // Main WebP — 900px max, effort 6 (best compression/quality ratio for catalog)
   const webpBuffer = await mainImage
     .clone()
-    .resize(1080, null, { withoutEnlargement: true })
-    .webp({ quality: 75, effort: 4 })
+    .resize(900, null, { withoutEnlargement: true })
+    .webp({ quality: 72, effort: 6, smartSubsample: true })
     .toBuffer();
 
-  // Fallback JPG image
+  // Fallback JPG — same size, mozjpeg encoder
   const jpgBuffer = await mainImage
     .clone()
-    .resize(1080, null, { withoutEnlargement: true })
-    .jpeg({ quality: 75, mozjpeg: true })
+    .resize(900, null, { withoutEnlargement: true })
+    .jpeg({ quality: 72, mozjpeg: true, progressive: true })
     .toBuffer();
 
-  // Thumbnail WebP (square crop)
+  // Thumbnail WebP — 320×320 square crop, heavy compression (shown small in grids)
   const thumbBuffer = await mainImage
     .clone()
-    .resize(400, 400, { fit: 'cover', position: 'centre' })
-    .webp({ quality: 70, effort: 4 })
+    .resize(320, 320, { fit: 'cover', position: 'centre' })
+    .webp({ quality: 65, effort: 6, smartSubsample: true })
     .toBuffer();
 
   // Write all files

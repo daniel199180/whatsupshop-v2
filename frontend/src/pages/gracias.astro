@@ -1,0 +1,96 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+let storeName = 'WhatsUpShop';
+try {
+  const res = await fetch(`${API_URL}/config`);
+  if (res.ok) {
+    const cfg = await res.json();
+    storeName = cfg.store_name || storeName;
+  }
+} catch (_) {}
+---
+
+<BaseLayout title={`¡Gracias! — ${storeName}`}>
+  <div class="min-h-dvh flex flex-col items-center justify-center px-6 py-12 text-center">
+
+    <!-- Checkmark animado -->
+    <div class="w-20 h-20 rounded-full bg-[#25D366]/10 flex items-center justify-center mb-6 animate-fade-in-up">
+      <svg class="w-10 h-10 text-[#25D366]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+      </svg>
+    </div>
+
+    <!-- Título -->
+    <h1 class="text-2xl font-extrabold text-gray-900 mb-1 animate-fade-in-up stagger-1">
+      ¡Gracias, <span id="customer-name" class="text-[#25D366]">!</span>
+    </h1>
+
+    <!-- Subtítulo -->
+    <p class="text-gray-500 text-sm mb-8 max-w-xs animate-fade-in-up stagger-2">
+      Tu pedido fue registrado correctamente.
+    </p>
+
+    <!-- Aviso WhatsApp -->
+    <div class="w-full max-w-sm bg-[#25D366]/8 border border-[#25D366]/20 rounded-2xl p-4 mb-8 animate-fade-in-up stagger-3">
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 mt-0.5">
+          <svg class="w-5 h-5 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.12 1.532 5.845L.057 23.451a.75.75 0 00.919.919l5.605-1.475A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75c-1.9 0-3.7-.504-5.25-1.386l-.375-.22-3.887 1.02 1.04-3.8-.24-.39A9.718 9.718 0 012.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+          </svg>
+        </div>
+        <div class="text-left">
+          <p class="text-sm font-semibold text-gray-800 mb-0.5">WhatsApp se abrió en otra ventana</p>
+          <p class="text-xs text-gray-500">Envía el mensaje para confirmar tu pedido con la tienda. Si no se abrió, usa el botón de abajo.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón reabrir WhatsApp -->
+    <button
+      id="reopen-wa"
+      class="hidden w-full max-w-sm py-3 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all btn-press shadow-md shadow-[#25D366]/25 mb-4 animate-fade-in-up stagger-4"
+    >
+      <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.12 1.532 5.845L.057 23.451a.75.75 0 00.919.919l5.605-1.475A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75c-1.9 0-3.7-.504-5.25-1.386l-.375-.22-3.887 1.02 1.04-3.8-.24-.39A9.718 9.718 0 012.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+      </svg>
+      Abrir WhatsApp
+    </button>
+
+    <!-- Volver a la tienda -->
+    <a
+      href="/"
+      class="w-full max-w-sm py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all text-center block animate-fade-in-up stagger-4"
+    >
+      Volver a la tienda
+    </a>
+
+  </div>
+
+  <script is:inline>
+    const params  = new URLSearchParams(window.location.search);
+    const nombre  = params.get('nombre') || '';
+    const waUrl   = params.get('wa') || '';
+
+    // Mostrar nombre del cliente
+    const nameEl = document.getElementById('customer-name');
+    if (nombre) {
+      nameEl.textContent = nombre + '!';
+    } else {
+      nameEl.textContent = '!';
+    }
+
+    // Botón reabrir WhatsApp si viene URL
+    if (waUrl) {
+      const btn = document.getElementById('reopen-wa');
+      btn.classList.remove('hidden');
+      btn.addEventListener('click', () => window.open(waUrl, '_blank'));
+    }
+
+    // Limpiar carrito del localStorage
+    localStorage.removeItem('cart');
+  </script>
+</BaseLayout>

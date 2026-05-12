@@ -9,6 +9,7 @@ export const categories = mysqlTable('categories', {
 export const products = mysqlTable('products', {
   id:            int('id').primaryKey().autoincrement(),
   slug:          varchar('slug', { length: 100 }).unique().notNull(),
+  sku:           varchar('sku', { length: 100 }),
   title:         varchar('title', { length: 300 }).notNull(),
   description:   text('description').notNull(),
   normalPrice:   float('normal_price').notNull(),
@@ -36,9 +37,12 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
 }));
 
 export const orders = mysqlTable('orders', {
-  id:        int('id').primaryKey().autoincrement(),
-  message:   text('message').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
+  id:            int('id').primaryKey().autoincrement(),
+  customerName:  varchar('customer_name', { length: 200 }).notNull(),
+  customerPhone: varchar('customer_phone', { length: 50 }).notNull(),
+  items:         json('items'),
+  message:       text('message').notNull(),
+  createdAt:     timestamp('created_at').defaultNow(),
 });
 
 export const storeConfig = mysqlTable('store_config', {
