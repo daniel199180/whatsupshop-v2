@@ -1,46 +1,91 @@
+# WhatsUpShop v2 — docker-compose.yml
+#
+# ── Required variables (set in EasyPanel or .env) ────────────────────────────
+#   APP_DOMAIN      Frontend domain, e.g. mystore.com
+#   API_DOMAIN      Backend API domain, e.g. api.mystore.com
+#   ADMIN_PASSWORD  Password for the admin panel
+#
+# ── Optional ──────────────────────────────────────────────────────────────────
+#   COMPOSE_PROJECT_NAME   Isolates volumes per client (default: whatsupshop)
+#   DB_NAME                Database name (default: whatsupshop)
+#   DB_USER                Database user (default: whatsupshop_user)
+#   ADMIN_USERNAME         Admin login name (default: admin)
+#   BACKUP_RETENTION_DAYS  Days to keep pre-migration backups (default: 7)
+#   AUTO_BACKUP_BEFORE_MIGRATE  Backup before each migration (default: true)
+#
+# All secrets (JWT_SECRET, DB_PASSWORD, DB_ROOT_PASSWORD, ADMIN_PASSWORD_HASH)
+# are auto-generated on first deploy into the named volume app_secrets.
+# Redeployments are safe: existing secrets are never overwritten.
+
 services:
+
+  # ── One-shot secret generator ──────────────────────────────────────────────
+  # Runs before every other service. Creates /app/secrets/runtime.env with
+  # all generated secrets. Exits 0 immediately on redeployment if the file
+  # already exists — secrets are never regenerated.
+  setup:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.setup
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-}
+      API_DOMAIN: ${API_DOMAIN:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    volumes:
+      - app_secrets:/app/secrets
+    restart: "no"
 
   # ── Database ───────────────────────────────────────────────────────────────
   db:
     image: mysql:8.0
     restart: always
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        . /app/secrets/runtime.env
+        export MYSQL_ROOT_PASSWORD="$$DB_ROOT_PASSWORD"
+        export MYSQL_PASSWORD="$$DB_PASSWORD"
+        exec /usr/local/bin/docker-entrypoint.sh mysqld
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password_change_me}
-      MYSQL_DATABASE:      ${DB_NAME:-whatsupshop}
-      MYSQL_USER:          ${DB_USER:-whatsupshop_user}
-      MYSQL_PASSWORD:      ${DB_PASSWORD:-password_change_me}
+      MYSQL_DATABASE: ${DB_NAME:-whatsupshop}
+      MYSQL_USER: ${DB_USER:-whatsupshop_user}
     # Solo para desarrollo local. No exponer MySQL en producción.
     # ports:
     #   - "3307:3306"
     volumes:
+      - app_secrets:/app/secrets:ro
       - mysql_data:/var/lib/mysql
       # init.sql runs ONLY when the MySQL volume is empty (first install).
-      # For schema updates on existing databases, use the migrate service below.
+      # For schema updates on existing databases, use the migrate service.
       - ./backend/drizzle/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${DB_ROOT_PASSWORD:-root_password_change_me}"]
+      test: ["CMD-SHELL", ". /app/secrets/runtime.env && mysqladmin ping -h localhost -u root --password=\"$$DB_ROOT_PASSWORD\""]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
+    depends_on:
+      setup:
+        condition: service_completed_successfully
 
-  # ── One-shot migration service ─────────────────────────────────────────────
-  # Runs Drizzle migrations against the live database before the backend starts.
-  # Makes an automatic backup first so any failed migration can be rolled back.
-  # The backend will NOT start if this service exits with a non-zero code.
+  # ── One-shot migration runner ──────────────────────────────────────────────
+  # Makes an automatic backup then applies Drizzle migrations.
+  # Backend will NOT start if this service exits with a non-zero code.
   migrate:
     build:
       context: ./backend
       dockerfile: Dockerfile.migrate
     environment:
-      - DB_HOST=${DB_HOST:-db}
-      - DB_PORT=${DB_PORT:-3306}
-      - DB_USER=${DB_USER:-whatsupshop_user}
-      - DB_PASSWORD=${DB_PASSWORD:-password_change_me}
-      - DB_NAME=${DB_NAME:-whatsupshop}
-      - AUTO_BACKUP_BEFORE_MIGRATE=${AUTO_BACKUP_BEFORE_MIGRATE:-true}
-      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-whatsupshop_user}
+      DB_NAME: ${DB_NAME:-whatsupshop}
+      AUTO_BACKUP_BEFORE_MIGRATE: ${AUTO_BACKUP_BEFORE_MIGRATE:-true}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
     volumes:
+      - app_secrets:/app/secrets:ro
       - db_backups:/app/backups
     depends_on:
       db:
@@ -48,6 +93,9 @@ services:
     restart: "no"
 
   # ── Backend API ────────────────────────────────────────────────────────────
+  # Secrets (JWT_SECRET, DB_PASSWORD, ADMIN_PASSWORD_HASH, PUBLIC_URL,
+  # CORS_ORIGIN) are loaded at startup from /app/secrets/runtime.env
+  # via the docker-entrypoint.sh wrapper.
   backend:
     build:
       context: ./backend
@@ -55,18 +103,14 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DB_HOST=${DB_HOST:-db}
-      - DB_PORT=${DB_PORT:-3306}
-      - DB_USER=${DB_USER:-whatsupshop_user}
-      - DB_PASSWORD=${DB_PASSWORD:-password_change_me}
-      - DB_NAME=${DB_NAME:-whatsupshop}
-      - JWT_SECRET=${JWT_SECRET}
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
-      - PORT=${PORT:-3000}
-      - PUBLIC_URL=${PUBLIC_URL}
-      - CORS_ORIGIN=${CORS_ORIGIN}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-whatsupshop_user}
+      DB_NAME: ${DB_NAME:-whatsupshop}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      PORT: "3000"
     volumes:
+      - app_secrets:/app/secrets:ro
       - uploads_data:/app/public/uploads
     depends_on:
       db:
@@ -76,14 +120,16 @@ services:
     restart: unless-stopped
 
   # ── Frontend ───────────────────────────────────────────────────────────────
+  # PUBLIC_API_URL is baked into the Astro bundle at build time via a build arg
+  # derived from API_DOMAIN — no runtime secrets needed here.
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        PUBLIC_API_URL: https://${API_DOMAIN:-localhost}
     ports:
       - "4321:4321"
-    environment:
-      - PUBLIC_API_URL=${PUBLIC_API_URL}
     depends_on:
       backend:
         condition: service_healthy
@@ -93,3 +139,4 @@ volumes:
   mysql_data:    # Persists the MySQL database — NEVER delete in production
   uploads_data:  # Persists uploaded product images — NEVER delete in production
   db_backups:    # Persists pre-migration backups — keep for rollback safety
+  app_secrets:   # Persists generated secrets — NEVER delete in production

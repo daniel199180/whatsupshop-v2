@@ -1,0 +1,13 @@
+FROM oven/bun:alpine
+WORKDIR /app
+
+RUN apk add --no-cache openssl bash
+
+COPY package.json bun.lock ./
+RUN bun install --production
+
+COPY scripts/setup.sh ./scripts/setup.sh
+COPY scripts/hash-password.js ./scripts/hash-password.js
+RUN chmod +x ./scripts/setup.sh
+
+CMD ["bash", "./scripts/setup.sh"]

@@ -111,64 +111,77 @@ npm run dev            # http://localhost:4321
 
 ## Variables de entorno
 
-### Backend (`backend/.env`)
+### Variables que configura el usuario
 
-| Variable | Descripción | Requerida |
+| Variable | Dónde | Descripción |
 |---|---|---|
-| `DB_HOST` | Host de MySQL | Sí |
-| `DB_PORT` | Puerto de MySQL | No (default: 3306) |
-| `DB_USER` | Usuario de MySQL | Sí |
-| `DB_PASSWORD` | Contraseña de MySQL | Sí |
-| `DB_NAME` | Nombre de la base de datos | Sí |
-| `DB_ROOT_PASSWORD` | Contraseña root MySQL (docker-compose) | Sí |
-| `JWT_SECRET` | Secreto para tokens JWT | Sí |
-| `ADMIN_USERNAME` | Usuario del panel admin | No (default: admin) |
-| `ADMIN_PASSWORD_HASH` | Hash bcrypt de la contraseña admin | Sí |
-| `PORT` | Puerto del servidor | No (default: 3000) |
-| `PUBLIC_URL` | URL pública del backend (para URLs de imágenes) | Sí |
-| `CORS_ORIGIN` | Origen(es) permitidos, separados por coma | Sí |
-| `AUTO_BACKUP_BEFORE_MIGRATE` | Hacer backup antes de migrar | No (default: true) |
-| `BACKUP_RETENTION_DAYS` | Días a conservar backups | No (default: 7) |
+| `APP_DOMAIN` | EasyPanel / .env | Dominio del frontend, ej. `mitienda.com` |
+| `API_DOMAIN` | EasyPanel / .env | Dominio del backend, ej. `api.mitienda.com` |
+| `ADMIN_PASSWORD` | EasyPanel / .env | Contraseña del panel de administración |
+| `COMPOSE_PROJECT_NAME` | EasyPanel / .env | Aísla recursos por cliente |
+| `ADMIN_USERNAME` | EasyPanel / .env | Login del admin (default: `admin`) |
+| `DB_NAME` | EasyPanel / .env | Nombre de BD (default: `whatsupshop`) |
+| `BACKUP_RETENTION_DAYS` | EasyPanel / .env | Días de backups (default: 7) |
+| `AUTO_BACKUP_BEFORE_MIGRATE` | EasyPanel / .env | Backup antes de migrar (default: true) |
 
-Generar valores para producción:
+### Variables auto-generadas (no configurar manualmente)
 
-```bash
-# JWT_SECRET
-openssl rand -hex 32
+El servicio `setup` escribe estas variables en `/app/secrets/runtime.env` la primera vez que se despliega. No se sobreescriben en redespliegues.
 
-# ADMIN_PASSWORD_HASH
-cd backend && bun run hash-password 'tu_contraseña'
-```
-
-### Frontend (`frontend/.env`)
-
-| Variable | Descripción | Requerida |
-|---|---|---|
-| `PUBLIC_API_URL` | URL pública del backend | Sí |
+| Variable | Generación |
+|---|---|
+| `JWT_SECRET` | `openssl rand -hex 32` |
+| `DB_PASSWORD` | `openssl rand -hex 24` |
+| `DB_ROOT_PASSWORD` | `openssl rand -hex 24` |
+| `ADMIN_PASSWORD_HASH` | `bcrypt(ADMIN_PASSWORD, cost=12)` |
+| `PUBLIC_URL` | `https://API_DOMAIN` |
+| `PUBLIC_API_URL` | `https://API_DOMAIN` |
+| `CORS_ORIGIN` | `https://APP_DOMAIN` |
 
 ---
 
-## Despliegue en EasyPanel
+## Instalación rápida en EasyPanel
 
-### Primer despliegue de un cliente nuevo
+### Variables mínimas por cliente
+
+| Variable | Ejemplo | Descripción |
+|---|---|---|
+| `COMPOSE_PROJECT_NAME` | `whatsupshop_cliente_acme` | Aísla volúmenes por cliente |
+| `APP_DOMAIN` | `mitienda.com` | Dominio del frontend |
+| `API_DOMAIN` | `api.mitienda.com` | Dominio del backend |
+| `ADMIN_PASSWORD` | `MiPasswordSegura123` | Contraseña del panel admin |
+
+El sistema **auto-genera** en el primer deploy:
+- `JWT_SECRET` — secreto aleatorio hex 32 bytes
+- `DB_PASSWORD` — contraseña de BD aleatoria
+- `DB_ROOT_PASSWORD` — contraseña root de BD aleatoria
+- `ADMIN_PASSWORD_HASH` — bcrypt(ADMIN_PASSWORD, cost=12)
+- `PUBLIC_URL`, `PUBLIC_API_URL`, `CORS_ORIGIN` — derivadas de los dominios
+
+### Pasos
 
 1. Crear un nuevo **proyecto** en EasyPanel.
-2. En ese proyecto, ir a **App → Docker Compose** y pegar / conectar este repositorio.
-3. Configurar las **variables de entorno** en EasyPanel (ver `.env.production.example`). Los valores mínimos obligatorios son:
-   ```
-   DB_ROOT_PASSWORD   DB_USER   DB_PASSWORD   DB_NAME
-   JWT_SECRET         ADMIN_PASSWORD_HASH
-   PUBLIC_URL         PUBLIC_API_URL   CORS_ORIGIN
-   COMPOSE_PROJECT_NAME=whatsupshop_cliente_nombre
-   ```
-4. Asignar **dominio al frontend** (puerto 4321) y **subdominio al backend** (puerto 3000) desde la sección Domains de cada servicio.
-5. Hacer **Deploy**.
+2. En ese proyecto, ir a **App → Docker Compose** y conectar este repositorio.
+3. Configurar las 4 variables requeridas en la sección de entorno de EasyPanel.
+4. Asignar **dominio al frontend** (puerto 4321) y **subdominio al backend** (puerto 3000).
+5. Hacer **Deploy** — un solo clic despliega todo.
 6. Verificar que el backend responde en `https://api.tudominio.com/health`.
 
-EasyPanel construirá las imágenes y ejecutará los servicios en orden:
-`db` → `migrate` → `backend` → `frontend`
+EasyPanel ejecuta los servicios en orden automáticamente:
 
-El servicio `migrate` hace un backup automático y aplica las migraciones pendientes. Si algo falla, el backend **no arranca**.
+```
+setup → db → migrate → backend → frontend
+```
+
+El servicio `setup` genera todos los secretos en el volumen `app_secrets` y **no los sobreescribe en redespliegues**. El servicio `migrate` hace backup automático antes de aplicar migraciones. Si algo falla, el backend no arranca.
+
+### Seguridad del volumen app_secrets
+
+> **No borrar `app_secrets`** — contiene JWT_SECRET, DB_PASSWORD y ADMIN_PASSWORD_HASH.
+>
+> Si se borra `app_secrets`, el setup generará nuevos secretos. Como DB_PASSWORD cambia, MySQL no podrá autenticarse y **la base de datos quedará inaccesible** hasta que se restaure manualmente.
+>
+> Si necesitas rotar secretos, borra `app_secrets` **y** `mysql_data` al mismo tiempo y reconfigura desde cero.
 
 ---
 
@@ -208,11 +221,14 @@ Los datos de clientes (productos, pedidos, categorías, configuración, imágene
 ## Despliegue con Docker Compose (local / staging)
 
 ```bash
-# Copiar y completar variables
+# Copiar y completar las 4 variables requeridas
 cp .env.production.example .env
 
-# Construir y levantar
+# Construir y levantar (setup genera secretos en primer arranque)
 docker compose up -d --build
+
+# Ver logs del generador de secretos
+docker compose logs setup
 
 # Ver logs del servicio de migraciones
 docker compose logs -f migrate
@@ -231,22 +247,22 @@ Servicios:
 
 ## Multi-cliente: replicar para un nuevo cliente
 
-Para cada cliente nuevo, copiar `.env.production.example` y cambiar **todos** los valores marcados como "PER-CLIENT":
+Para cada cliente nuevo, solo hay que configurar 4 variables únicas:
 
 | Variable | Por qué cambiarla |
 |---|---|
-| `COMPOSE_PROJECT_NAME` | Aísla volúmenes Docker (mysql_data, uploads_data, db_backups) |
-| `DB_NAME` | Base de datos propia por cliente |
-| `DB_USER` / `DB_PASSWORD` | Credenciales propias |
-| `DB_ROOT_PASSWORD` | Contraseña root propia |
-| `JWT_SECRET` | Secreto independiente por seguridad |
-| `ADMIN_PASSWORD_HASH` | Contraseña del panel admin |
-| `PUBLIC_URL` / `PUBLIC_API_URL` | Dominio propio del cliente |
-| `CORS_ORIGIN` | Dominio del frontend del cliente |
+| `COMPOSE_PROJECT_NAME` | Aísla todos los volúmenes Docker por cliente |
+| `APP_DOMAIN` | Dominio del frontend del cliente |
+| `API_DOMAIN` | Dominio del backend del cliente |
+| `ADMIN_PASSWORD` | Contraseña del panel admin del cliente |
+
+El resto (JWT_SECRET, DB_PASSWORD, DB_ROOT_PASSWORD, etc.) se genera automáticamente de forma independiente para cada cliente.
 
 Con `COMPOSE_PROJECT_NAME` diferente, cada cliente tiene sus propios volúmenes y nunca se mezclan datos:
 - `whatsupshop_cliente_acme_mysql_data`
+- `whatsupshop_cliente_acme_app_secrets`
 - `whatsupshop_cliente_beta_mysql_data`
+- `whatsupshop_cliente_beta_app_secrets`
 
 ---
 
@@ -285,6 +301,8 @@ Desde el panel se pueden gestionar:
 > **No borrar `uploads_data`** — contiene las imágenes subidas de productos.
 >
 > **No borrar `db_backups`** — contiene los backups pre-migración para rollback.
+>
+> **No borrar `app_secrets`** — contiene JWT_SECRET, DB_PASSWORD y ADMIN_PASSWORD_HASH. Si se borra, el setup genera nuevos secretos y MySQL queda inaccesible porque la contraseña no coincide con la almacenada en `mysql_data`. Solo borrar si también se borra `mysql_data`.
 >
 > **No usar `init.sql` para actualizar** — solo sirve para la primera instalación (volumen vacío).
 >
