@@ -3,7 +3,6 @@ node_modules
 .env.*
 !.env.example
 public/uploads
-drizzle/meta
 package-lock.json
 .DS_Store
 .git
