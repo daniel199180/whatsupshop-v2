@@ -1,0 +1,23 @@
+FROM oven/bun:alpine
+
+WORKDIR /app
+
+# mysql-client provides mysqladmin (health check / ping) and mysqldump (backup).
+# bash is required by migrate.sh. gzip compresses the backups.
+RUN apk add --no-cache mysql-client bash gzip
+
+COPY package.json bun.lock ./
+# Install all deps (including drizzle-kit in devDependencies).
+RUN bun install
+
+COPY drizzle.config.ts ./
+COPY src ./src
+COPY drizzle ./drizzle
+COPY scripts ./scripts
+
+RUN chmod +x ./scripts/migrate.sh
+
+# One-shot container: runs migrate.sh and exits.
+# docker-compose depends_on condition: service_completed_successfully
+# ensures the backend only starts when this exits 0.
+CMD ["bash", "./scripts/migrate.sh"]

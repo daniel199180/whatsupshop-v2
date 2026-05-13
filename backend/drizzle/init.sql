@@ -1,7 +1,8 @@
 -- WhatsUpShop — Schema completo para inicialización del contenedor MySQL.
--- Este archivo fusiona 0000_initial_schema.sql + 0001_orders_customer_fields.sql.
--- MySQL ejecuta /docker-entrypoint-initdb.d/ solo cuando el volumen está vacío,
--- por lo que un único archivo garantiza que el esquema completo se aplique.
+-- IMPORTANTE: MySQL ejecuta este archivo SOLO cuando el volumen está vacío
+-- (primera instalación). NO se usa para actualizar clientes existentes.
+-- Las actualizaciones de schema se gestionan con migraciones Drizzle
+-- (ver backend/drizzle/). No borrar mysql_data para "actualizar".
 
 CREATE TABLE IF NOT EXISTS `categories` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -13,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `categories` (
 CREATE TABLE IF NOT EXISTS `products` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `slug` VARCHAR(100) NOT NULL,
+  `sku` VARCHAR(100) DEFAULT NULL,
   `title` VARCHAR(300) NOT NULL,
   `description` TEXT NOT NULL,
   `normal_price` FLOAT NOT NULL,

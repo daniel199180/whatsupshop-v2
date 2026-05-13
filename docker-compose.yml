@@ -1,16 +1,53 @@
 services:
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "4321:4321"
-    environment:
-      - PUBLIC_API_URL=${PUBLIC_API_URL}
-    depends_on:
-      - backend
-    restart: unless-stopped
 
+  # ── Database ───────────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password_change_me}
+      MYSQL_DATABASE:      ${DB_NAME:-whatsupshop}
+      MYSQL_USER:          ${DB_USER:-whatsupshop_user}
+      MYSQL_PASSWORD:      ${DB_PASSWORD:-password_change_me}
+    # Solo para desarrollo local. No exponer MySQL en producción.
+    # ports:
+    #   - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # init.sql runs ONLY when the MySQL volume is empty (first install).
+      # For schema updates on existing databases, use the migrate service below.
+      - ./backend/drizzle/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${DB_ROOT_PASSWORD:-root_password_change_me}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── One-shot migration service ─────────────────────────────────────────────
+  # Runs Drizzle migrations against the live database before the backend starts.
+  # Makes an automatic backup first so any failed migration can be rolled back.
+  # The backend will NOT start if this service exits with a non-zero code.
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.migrate
+    environment:
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_USER=${DB_USER:-whatsupshop_user}
+      - DB_PASSWORD=${DB_PASSWORD:-password_change_me}
+      - DB_NAME=${DB_NAME:-whatsupshop}
+      - AUTO_BACKUP_BEFORE_MIGRATE=${AUTO_BACKUP_BEFORE_MIGRATE:-true}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - db_backups:/app/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Backend API ────────────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -18,11 +55,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DB_HOST=${DB_HOST}
+      - DB_HOST=${DB_HOST:-db}
       - DB_PORT=${DB_PORT:-3306}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER:-whatsupshop_user}
+      - DB_PASSWORD=${DB_PASSWORD:-password_change_me}
+      - DB_NAME=${DB_NAME:-whatsupshop}
       - JWT_SECRET=${JWT_SECRET}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
@@ -34,27 +71,25 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
-  db:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password_change_me}
-      MYSQL_DATABASE: ${DB_NAME:-mydatabase}
-      MYSQL_USER: ${DB_USER:-user}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-password}
+  # ── Frontend ───────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "3307:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./backend/drizzle/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      - "4321:4321"
+    environment:
+      - PUBLIC_API_URL=${PUBLIC_API_URL}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
-  mysql_data:
-  uploads_data:
+  mysql_data:    # Persists the MySQL database — NEVER delete in production
+  uploads_data:  # Persists uploaded product images — NEVER delete in production
+  db_backups:    # Persists pre-migration backups — keep for rollback safety

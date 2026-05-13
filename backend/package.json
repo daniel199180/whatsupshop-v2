@@ -7,6 +7,7 @@
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "db:generate": "bunx drizzle-kit generate",
+    "db:migrate": "bunx drizzle-kit migrate",
     "db:push": "bunx drizzle-kit push",
     "db:studio": "bunx drizzle-kit studio",
     "hash-password": "bunx @aspect-build/bun -e \"const bcrypt = require('bcrypt'); const hash = bcrypt.hashSync(process.argv[1], 12); console.log(hash);\"",

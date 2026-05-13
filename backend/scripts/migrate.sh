@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# WhatsUpShop — Production migration runner.
+# Runs as the migrate one-shot service in docker-compose.yml.
+# Exits 0 on success; non-zero on any failure (blocks backend startup).
+set -euo pipefail
+
+# ── Colour helpers ────────────────────────────────────────────────────────────
+log()  { echo "[migrate] $*"; }
+err()  { echo "[migrate][ERROR] $*" >&2; }
+
+# ── 1. Validate required environment variables ────────────────────────────────
+REQUIRED_VARS=(DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME)
+missing=()
+for var in "${REQUIRED_VARS[@]}"; do
+  [[ -z "${!var:-}" ]] && missing+=("$var")
+done
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+  err "Missing required environment variables: ${missing[*]}"
+  exit 1
+fi
+
+# ── 2. Wait for MySQL to be ready ─────────────────────────────────────────────
+log "waiting for database at ${DB_HOST}:${DB_PORT}..."
+
+MAX_ATTEMPTS=60
+attempt=0
+until mysqladmin ping \
+  --host="${DB_HOST}" \
+  --port="${DB_PORT}" \
+  --user="${DB_USER}" \
+  --password="${DB_PASSWORD}" \
+  --silent 2>/dev/null; do
+  attempt=$((attempt + 1))
+  if [[ $attempt -ge $MAX_ATTEMPTS ]]; then
+    err "database did not become ready after ${MAX_ATTEMPTS} attempts"
+    exit 1
+  fi
+  sleep 2
+done
+
+log "database ready"
+
+# ── 3. Backup ─────────────────────────────────────────────────────────────────
+AUTO_BACKUP="${AUTO_BACKUP_BEFORE_MIGRATE:-true}"
+BACKUP_DIR="/app/backups"
+mkdir -p "${BACKUP_DIR}"
+
+if [[ "${AUTO_BACKUP}" != "false" ]]; then
+  TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+  BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_pre_migrate_${TIMESTAMP}.sql.gz"
+
+  log "creating backup → ${BACKUP_FILE}"
+
+  # If mysqldump fails, exit immediately (set -e handles this)
+  mysqldump \
+    --host="${DB_HOST}" \
+    --port="${DB_PORT}" \
+    --user="${DB_USER}" \
+    --password="${DB_PASSWORD}" \
+    --single-transaction \
+    --routines \
+    --triggers \
+    "${DB_NAME}" | gzip > "${BACKUP_FILE}"
+
+  log "backup created: $(du -sh "${BACKUP_FILE}" | cut -f1)"
+
+  # ── Retention: delete backups older than BACKUP_RETENTION_DAYS ──────────────
+  RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
+  if [[ "${RETENTION_DAYS}" =~ ^[0-9]+$ ]] && [[ "${RETENTION_DAYS}" -gt 0 ]]; then
+    deleted=$(find "${BACKUP_DIR}" \
+      -maxdepth 1 \
+      -name "${DB_NAME}_pre_migrate_*.sql.gz" \
+      -mtime +"${RETENTION_DAYS}" \
+      -print \
+      -delete | wc -l | tr -d ' ')
+    [[ "${deleted}" -gt 0 ]] && log "purged ${deleted} backup(s) older than ${RETENTION_DAYS} days"
+  fi
+else
+  log "AUTO_BACKUP_BEFORE_MIGRATE=false — skipping backup"
+fi
+
+# ── 4. Run Drizzle migrations ─────────────────────────────────────────────────
+log "running drizzle migrations..."
+
+# drizzle-kit migrate needs the DB env vars — they are already in the environment
+bun run db:migrate
+
+log "migrations completed successfully"

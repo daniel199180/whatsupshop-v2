@@ -1,12 +1,19 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1778444821427,
-      "tag": "0000_serious_scarecrow",
+      "version": "5",
+      "when": 1747094400000,
+      "tag": "0000_mysql_baseline",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1747094460000,
+      "tag": "0001_add_products_sku",
       "breakpoints": true
     }
   ]
