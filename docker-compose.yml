@@ -18,7 +18,7 @@
 # Redeployments are safe: existing secrets are never overwritten.
 #
 # Startup order:
-#   setup → preflight → db → migrate → backend → frontend
+#   setup → preflight → db → db-user-init → migrate → backend → frontend
 
 services:
 
@@ -97,6 +97,27 @@ services:
       preflight:
         condition: service_completed_successfully
 
+  # ── One-shot DB user initializer ──────────────────────────────────────────
+  # Runs after db is healthy. Creates DB_NAME and DB_USER if missing, and
+  # always updates DB_USER's password to match the current runtime.env.
+  # Fixes volume desync where mysql_data has a stale user/password.
+  # Idempotent: safe to run on every deploy. No data is deleted.
+  db-user-init:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.db-user-init
+    environment:
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-whatsupshop_user}
+      DB_NAME: ${DB_NAME:-whatsupshop}
+    volumes:
+      - app_secrets:/app/secrets:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   # ── One-shot migration runner ──────────────────────────────────────────────
   # Makes an automatic backup then applies Drizzle migrations.
   # Backend will NOT start if this service exits with a non-zero code.
@@ -115,8 +136,8 @@ services:
       - app_secrets:/app/secrets:ro
       - db_backups:/app/backups
     depends_on:
-      db:
-        condition: service_healthy
+      db-user-init:
+        condition: service_completed_successfully
     restart: "no"
 
   # ── Backend API ────────────────────────────────────────────────────────────

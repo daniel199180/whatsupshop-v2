@@ -174,12 +174,13 @@ El sistema **auto-genera** en el primer deploy:
 EasyPanel ejecuta los servicios en orden automáticamente:
 
 ```
-setup → preflight → db → migrate → backend → frontend
+setup → preflight → db → db-user-init → migrate → backend → frontend
 ```
 
 - `setup` genera todos los secretos en `app_secrets` y **no los sobreescribe en redespliegues**. También crea `runtime.env.backup` e `install.lock`.
 - `preflight` valida que `app_secrets/runtime.env` esté íntegro **antes** de que el DB arranque. Si detecta secretos faltantes o corruptos, detiene el stack con un mensaje claro.
-- `migrate` hace backup automático antes de aplicar migraciones.
+- `db-user-init` se ejecuta después de que el DB está saludable. Crea `DB_NAME` y `DB_USER` si no existen, y **siempre actualiza la contraseña de `DB_USER`** para que coincida con `DB_PASSWORD` del `runtime.env` actual. Esto resuelve el desync cuando `mysql_data` tiene un usuario con contraseña antigua. **No borra datos.**
+- `migrate` hace backup automático antes de aplicar migraciones Drizzle.
 - Si cualquier servicio falla, el backend no arranca.
 
 ### Seguridad del volumen app_secrets
@@ -322,9 +323,9 @@ git push origin main
 ```
 
 EasyPanel reconstruye las imágenes y ejecuta el flujo completo:
-`setup → preflight → db → migrate → backend → frontend`
+`setup → preflight → db → db-user-init → migrate → backend → frontend`
 
-El servicio `migrate` hace backup automático antes de aplicar migraciones. Los datos existentes no se tocan.
+`db-user-init` asegura que `DB_USER` exista y tenga los permisos correctos antes de que `migrate` corra. `migrate` hace backup automático antes de aplicar migraciones. Los datos existentes no se tocan.
 
 ### Para cambios en la base de datos
 

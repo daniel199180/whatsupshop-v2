@@ -1,0 +1,11 @@
+FROM alpine:3.20
+WORKDIR /app
+
+RUN apk add --no-cache bash mysql-client
+
+COPY scripts/db-user-init.sh ./scripts/db-user-init.sh
+RUN chmod +x ./scripts/db-user-init.sh
+
+# One-shot container: ensures DB_USER exists with correct password and
+# privileges before migrate runs. Safe to run on every deploy.
+CMD ["bash", "./scripts/db-user-init.sh"]
