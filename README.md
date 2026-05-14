@@ -179,8 +179,8 @@ setup → preflight → db → db-user-init → migrate → backend → frontend
 
 - `setup` genera todos los secretos en `app_secrets` y **no los sobreescribe en redespliegues**. También crea `runtime.env.backup` e `install.lock`.
 - `preflight` valida que `app_secrets/runtime.env` esté íntegro **antes** de que el DB arranque. Si detecta secretos faltantes o corruptos, detiene el stack con un mensaje claro.
-- `db-user-init` se ejecuta después de que el DB está saludable. Crea `DB_NAME` y `DB_USER` si no existen, y **siempre actualiza la contraseña de `DB_USER`** para que coincida con `DB_PASSWORD` del `runtime.env` actual. Esto resuelve el desync cuando `mysql_data` tiene un usuario con contraseña antigua. **No borra datos.**
-- `migrate` hace backup automático antes de aplicar migraciones Drizzle.
+- `db-user-init` se ejecuta después de que el DB está saludable. Crea `DB_NAME` y `DB_USER` si no existen, y **siempre actualiza la contraseña de `DB_USER`** para que coincida con `DB_PASSWORD` del `runtime.env` actual. Esto resuelve el desync cuando `mysql_data` tiene un usuario con contraseña antigua. **No borra datos.** Usa la imagen oficial `mysql:8.0` (cliente nativo con soporte para `caching_sha2_password`).
+- `migrate` hace backup automático antes de aplicar migraciones Drizzle. Usa `oven/bun:1-debian` con `default-mysql-client` de Debian bookworm (MariaDB 10.11+, compatible con `caching_sha2_password` de MySQL 8). No se usa `mysql_native_password`.
 - Si cualquier servicio falla, el backend no arranca.
 
 ### Seguridad del volumen app_secrets
