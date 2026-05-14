@@ -42,8 +42,12 @@ Catálogo de productos con carrito y checkout por WhatsApp. Backend API REST con
 │   │   ├── meta/         # Snapshots de estado del schema
 │   │   └── init.sql      # Solo para volúmenes MySQL vacíos (primera instalación)
 │   ├── scripts/
-│   │   └── migrate.sh    # Script de migración con backup automático
+│   │   ├── setup.sh      # Genera secretos + install.lock + backup
+│   │   ├── preflight.sh  # Valida app_secrets antes de que el DB arranque
+│   │   └── migrate.sh    # Migración con backup automático y diagnóstico
 │   ├── Dockerfile
+│   ├── Dockerfile.setup
+│   ├── Dockerfile.preflight
 │   └── Dockerfile.migrate
 ├── frontend/             # Catálogo + admin (Astro SSR)
 │   └── src/
@@ -170,10 +174,13 @@ El sistema **auto-genera** en el primer deploy:
 EasyPanel ejecuta los servicios en orden automáticamente:
 
 ```
-setup → db → migrate → backend → frontend
+setup → preflight → db → migrate → backend → frontend
 ```
 
-El servicio `setup` genera todos los secretos en el volumen `app_secrets` y **no los sobreescribe en redespliegues**. El servicio `migrate` hace backup automático antes de aplicar migraciones. Si algo falla, el backend no arranca.
+- `setup` genera todos los secretos en `app_secrets` y **no los sobreescribe en redespliegues**. También crea `runtime.env.backup` e `install.lock`.
+- `preflight` valida que `app_secrets/runtime.env` esté íntegro **antes** de que el DB arranque. Si detecta secretos faltantes o corruptos, detiene el stack con un mensaje claro.
+- `migrate` hace backup automático antes de aplicar migraciones.
+- Si cualquier servicio falla, el backend no arranca.
 
 ### Seguridad del volumen app_secrets
 
@@ -291,6 +298,104 @@ Desde el panel se pueden gestionar:
 - Categorías
 - Configuración de la tienda (nombre, número de WhatsApp, moneda)
 - Pedidos recibidos
+
+---
+
+## Reglas de producción para actualizaciones
+
+### Volúmenes que nunca se deben borrar
+
+| Volumen | Contenido |
+|---|---|
+| `mysql_data` | Toda la base de datos del cliente |
+| `app_secrets` | JWT_SECRET, DB_PASSWORD, ADMIN_PASSWORD_HASH |
+| `uploads_data` | Imágenes de productos subidas |
+| `db_backups` | Backups pre-migración para rollback |
+
+Borrar cualquiera de estos volúmenes en producción puede resultar en pérdida de datos o en que el sistema quede inaccesible.
+
+### Para actualizar código (sin cambios en la base de datos)
+
+```bash
+git push origin main
+# En EasyPanel: pulsar Redeploy
+```
+
+EasyPanel reconstruye las imágenes y ejecuta el flujo completo:
+`setup → preflight → db → migrate → backend → frontend`
+
+El servicio `migrate` hace backup automático antes de aplicar migraciones. Los datos existentes no se tocan.
+
+### Para cambios en la base de datos
+
+Siempre usar migraciones Drizzle. **Nunca usar `db:push` en producción.**
+
+```bash
+# 1. Modificar backend/src/lib/schema.ts
+# 2. Generar la migración
+cd backend && bun run db:generate
+
+# 3. Revisar el SQL generado en backend/drizzle/
+#    Verificar que no haya DROP TABLE o DROP COLUMN no deseados
+
+# 4. Commit y push
+git add backend/drizzle/ backend/src/
+git commit -m "feat: descripción del cambio"
+git push origin main
+
+# 5. En EasyPanel: pulsar Redeploy
+```
+
+**Nunca editar `init.sql` para bases existentes** — `init.sql` solo se ejecuta cuando `mysql_data` está vacío (primera instalación). En bases existentes, los cambios deben ir en migraciones Drizzle.
+
+### Para agregar campos (ejemplo: payment_link)
+
+Crear una migración aditiva que no rompa datos existentes:
+
+```sql
+-- backend/drizzle/0002_add_payment_link.sql
+ALTER TABLE orders ADD COLUMN payment_link VARCHAR(500) DEFAULT NULL;
+```
+
+O via schema.ts + `bun run db:generate`:
+
+```typescript
+// En schema.ts
+paymentLink: varchar('payment_link', { length: 500 }).default(sql`NULL`),
+```
+
+Las columnas nuevas con `DEFAULT NULL` no afectan filas existentes.
+
+### Si se pierde app_secrets (runtime.env)
+
+> **Situación crítica**: si `app_secrets` se borra o `runtime.env` se corrompe mientras `mysql_data` sigue intacto, el sistema no puede autenticarse contra la base de datos porque `DB_PASSWORD` ya no coincide.
+
+**En producción:**
+1. **No redeplegar** con secretos nuevos sobre `mysql_data` existente.
+2. Restaurar `runtime.env` desde `runtime.env.backup` (dentro del mismo volumen `app_secrets`) o desde un backup externo.
+3. Una vez restaurado `runtime.env`, hacer Redeploy normalmente.
+
+**En instalación de prueba (sin datos reales):**
+1. Borrar **ambos** volúmenes: `mysql_data` y `app_secrets`.
+2. Hacer Redeploy — el sistema se inicializa desde cero.
+
+### Diagnóstico rápido de desincronización
+
+Si el servicio `migrate` falla con "Could not connect to MySQL using DB_USER/DB_PASSWORD":
+
+```bash
+# Ver logs del preflight (valida secrets antes del DB)
+docker compose logs preflight
+
+# Ver logs del setup (generación de secrets)
+docker compose logs setup
+
+# Ver logs de la base de datos
+docker compose logs db
+
+# Ver el install.lock (metadatos no sensibles de la instalación original)
+docker compose run --rm preflight cat /app/secrets/install.lock
+```
 
 ---
 

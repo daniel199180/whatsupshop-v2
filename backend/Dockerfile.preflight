@@ -1,0 +1,12 @@
+FROM alpine:3.20
+WORKDIR /app
+
+RUN apk add --no-cache bash
+
+COPY scripts/preflight.sh ./scripts/preflight.sh
+RUN chmod +x ./scripts/preflight.sh
+
+# One-shot container: validates app_secrets integrity before db starts.
+# docker-compose depends_on condition: service_completed_successfully
+# ensures db only starts when this exits 0.
+CMD ["bash", "./scripts/preflight.sh"]
