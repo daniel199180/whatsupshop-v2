@@ -53,7 +53,6 @@ until MYSQL_PWD="${DB_PASSWORD}" mysql \
     err "Could not run SELECT 1 using DB_USER/DB_PASSWORD on DB_NAME after ${MAX_ATTEMPTS} attempts."
     err ""
     err "Real MySQL error:"
-    # Run once without suppression to expose the actual MySQL error in logs.
     MYSQL_PWD="${DB_PASSWORD}" mysql \
       --protocol=TCP \
       --host="${DB_HOST}" \
@@ -97,15 +96,20 @@ if [[ "${AUTO_BACKUP}" != "false" ]]; then
 
   log "Creating backup → ${BACKUP_FILE}"
 
-  MYSQL_PWD="${DB_PASSWORD}" mysqldump \
+  if ! MYSQL_PWD="${DB_PASSWORD}" mysqldump \
     --protocol=TCP \
     --host="${DB_HOST}" \
     --port="${DB_PORT}" \
     --user="${DB_USER}" \
+    --no-tablespaces \
     --single-transaction \
     --routines \
     --triggers \
-    "${DB_NAME}" | gzip > "${BACKUP_FILE}"
+    "${DB_NAME}" | gzip > "${BACKUP_FILE}"; then
+    err "Backup failed. Aborting migrations."
+    rm -f "${BACKUP_FILE}"
+    exit 1
+  fi
 
   log "Backup created: $(du -sh "${BACKUP_FILE}" | cut -f1)"
 
@@ -127,6 +131,9 @@ fi
 # ── 4. Run Drizzle migrations ─────────────────────────────────────────────────
 log "Running Drizzle migrations..."
 
-bun run db:migrate
+if ! bunx drizzle-kit migrate --config=drizzle.config.ts; then
+  err "Drizzle migration failed."
+  exit 1
+fi
 
 log "Migrations completed successfully."

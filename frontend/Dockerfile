@@ -10,7 +10,8 @@ RUN npx astro build
 
 FROM node:22-alpine
 WORKDIR /app
-# El adaptador standalone de Astro bundlea todo en dist/ sin necesitar node_modules
+# Astro SSR con @astrojs/node requiere node_modules en runtime.
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY package.json ./
 
