@@ -84,9 +84,10 @@ services:
     volumes:
       - app_secrets:/app/secrets:ro
       - mysql_data:/var/lib/mysql
-      # init.sql runs ONLY when the MySQL volume is empty (first install).
-      # For schema updates on existing databases, use the migrate service.
-      - ./backend/drizzle/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # MySQL starts empty. Drizzle migrations (migrate service) are the only
+      # source of truth for the schema. init.sql is NOT mounted — it is kept
+      # in backend/drizzle/ for manual reference only. Do NOT re-add the
+      # init.sql mount: it conflicts with Drizzle on fresh installs.
     healthcheck:
       test: ["CMD-SHELL", ". /app/secrets/runtime.env && mysqladmin ping -h localhost -u root --password=\"$$DB_ROOT_PASSWORD\""]
       interval: 10s

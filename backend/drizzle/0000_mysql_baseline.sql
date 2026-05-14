@@ -1,6 +1,6 @@
 -- WhatsUpShop — MySQL baseline migration.
--- Uses CREATE TABLE IF NOT EXISTS so it is safe to run against databases
--- that were already initialised with init.sql (fresh MySQL volume).
+-- Drizzle is the single source of truth for the schema. MySQL starts empty;
+-- this migration creates all tables on first deploy.
 -- --> statement-breakpoint markers tell drizzle-kit where to split statements.
 
 --> statement-breakpoint
@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `store_config` (
 CREATE TABLE IF NOT EXISTS `products` (
   `id`             INT          NOT NULL AUTO_INCREMENT,
   `slug`           VARCHAR(100) NOT NULL,
+  `sku`            VARCHAR(100)          DEFAULT NULL,
   `title`          VARCHAR(300) NOT NULL,
   `description`    TEXT         NOT NULL,
   `normal_price`   FLOAT        NOT NULL,
