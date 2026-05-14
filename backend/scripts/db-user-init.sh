@@ -52,11 +52,11 @@ log "Waiting for MySQL root connection at ${DB_HOST}:${DB_PORT}..."
 
 MAX_ATTEMPTS=30
 attempt=0
-until mysqladmin ping \
+until MYSQL_PWD="${DB_ROOT_PASSWORD}" mysqladmin ping \
+  --protocol=TCP \
   --host="${DB_HOST}" \
   --port="${DB_PORT}" \
   --user=root \
-  --password="${DB_ROOT_PASSWORD}" \
   --silent 2>/dev/null; do
   attempt=$((attempt + 1))
   if [[ $attempt -ge $MAX_ATTEMPTS ]]; then
@@ -73,11 +73,11 @@ log "MySQL root connection OK."
 # ── Ensure database and user exist with correct credentials ───────────────────
 log "Initializing database '${DB_NAME}' and user '${DB_USER}'..."
 
-mysql \
+MYSQL_PWD="${DB_ROOT_PASSWORD}" mysql \
+  --protocol=TCP \
   --host="${DB_HOST}" \
   --port="${DB_PORT}" \
   --user=root \
-  --password="${DB_ROOT_PASSWORD}" \
   --silent \
   <<SQL
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;
@@ -87,18 +87,32 @@ GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'%';
 FLUSH PRIVILEGES;
 SQL
 
-# ── Verify DB_USER can connect ────────────────────────────────────────────────
-log "Verifying ${DB_USER} connection..."
+# ── Verify DB_USER can run a real SQL query on DB_NAME ───────────────────────
+log "Verifying ${DB_USER} SQL connection on '${DB_NAME}'..."
 
-if mysqladmin ping \
+if MYSQL_PWD="${DB_PASSWORD}" mysql \
+  --protocol=TCP \
   --host="${DB_HOST}" \
   --port="${DB_PORT}" \
   --user="${DB_USER}" \
-  --password="${DB_PASSWORD}" \
-  --silent 2>/dev/null; then
+  --database="${DB_NAME}" \
+  --execute="SELECT 1;" \
+  > /dev/null 2>&1; then
+  log "DB user SQL connection OK."
   log "DB user ready."
 else
-  err "DB user '${DB_USER}' could not connect after initialization."
-  err "This is unexpected — check MySQL error logs."
+  err "DB user '${DB_USER}' could not run SELECT 1 on '${DB_NAME}'."
+  err ""
+  err "Real MySQL error:"
+  MYSQL_PWD="${DB_PASSWORD}" mysql \
+    --protocol=TCP \
+    --host="${DB_HOST}" \
+    --port="${DB_PORT}" \
+    --user="${DB_USER}" \
+    --database="${DB_NAME}" \
+    --execute="SELECT 1;" 2>&1 || true
+  err ""
+  err "This is unexpected after a successful ALTER USER."
+  err "Check MySQL error logs: docker compose logs db"
   exit 1
 fi

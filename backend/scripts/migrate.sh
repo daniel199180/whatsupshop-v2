@@ -19,7 +19,7 @@ set -a
 source "${RUNTIME_ENV}"
 set +a
 
-# ── Colour helpers ────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 log()  { echo "[migrate] $*"; }
 err()  { echo "[migrate][ERROR] $*" >&2; }
 
@@ -35,35 +35,39 @@ if [[ ${#missing[@]} -gt 0 ]]; then
   exit 1
 fi
 
-# ── 2. Wait for MySQL to be ready using DB_USER/DB_PASSWORD ───────────────────
-log "Waiting for database at ${DB_HOST}:${DB_PORT} (user: ${DB_USER})..."
+# ── 2. Wait for MySQL — real SQL connection test ──────────────────────────────
+log "Waiting for SQL connection at ${DB_HOST}:${DB_PORT} (user: ${DB_USER}, db: ${DB_NAME})..."
 
 MAX_ATTEMPTS=60
 attempt=0
-until mysqladmin ping \
+until MYSQL_PWD="${DB_PASSWORD}" mysql \
+  --protocol=TCP \
   --host="${DB_HOST}" \
   --port="${DB_PORT}" \
   --user="${DB_USER}" \
-  --password="${DB_PASSWORD}" \
-  --silent 2>/dev/null; do
+  --database="${DB_NAME}" \
+  --execute="SELECT 1;" \
+  > /dev/null 2>&1; do
   attempt=$((attempt + 1))
   if [[ $attempt -ge $MAX_ATTEMPTS ]]; then
-    err "Could not connect to MySQL using DB_USER/DB_PASSWORD after ${MAX_ATTEMPTS} attempts."
+    err "Could not run SELECT 1 using DB_USER/DB_PASSWORD on DB_NAME after ${MAX_ATTEMPTS} attempts."
     err ""
     err "Real MySQL error:"
-    # Run once without stderr suppression to expose the actual MySQL error.
-    mysqladmin ping \
+    # Run once without suppression to expose the actual MySQL error in logs.
+    MYSQL_PWD="${DB_PASSWORD}" mysql \
+      --protocol=TCP \
       --host="${DB_HOST}" \
       --port="${DB_PORT}" \
       --user="${DB_USER}" \
-      --password="${DB_PASSWORD}" \
-      --silent 2>&1 || true
+      --database="${DB_NAME}" \
+      --execute="SELECT 1;" 2>&1 || true
     err ""
     err "Possible causes:"
-    err "  1. mysql_data was created with different secrets (volume desync)."
-    err "     app_secrets was deleted or regenerated after the DB was initialized."
-    err "  2. DB_USER or DB_NAME changed after first install."
-    err "  3. The database container is unhealthy or still starting."
+    err "  1. DB_USER does not have permissions on DB_NAME."
+    err "  2. DB_NAME does not exist."
+    err "  3. DB_PASSWORD does not match the MySQL user."
+    err "  4. MySQL client cannot authenticate (plugin mismatch)."
+    err "  5. mysql_data and app_secrets are out of sync."
     err ""
     err "Recovery:"
     err "  - PRODUCTION: Restore app_secrets/runtime.env from runtime.env.backup"
@@ -80,7 +84,7 @@ until mysqladmin ping \
   sleep 2
 done
 
-log "Database ready."
+log "Database SQL connection ready."
 
 # ── 3. Backup ─────────────────────────────────────────────────────────────────
 AUTO_BACKUP="${AUTO_BACKUP_BEFORE_MIGRATE:-true}"
@@ -93,11 +97,11 @@ if [[ "${AUTO_BACKUP}" != "false" ]]; then
 
   log "Creating backup → ${BACKUP_FILE}"
 
-  mysqldump \
+  MYSQL_PWD="${DB_PASSWORD}" mysqldump \
+    --protocol=TCP \
     --host="${DB_HOST}" \
     --port="${DB_PORT}" \
     --user="${DB_USER}" \
-    --password="${DB_PASSWORD}" \
     --single-transaction \
     --routines \
     --triggers \
