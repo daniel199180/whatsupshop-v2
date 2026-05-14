@@ -127,8 +127,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
       DB_HOST: ${DB_HOST:-db}
       DB_PORT: ${DB_PORT:-3306}
@@ -155,8 +155,8 @@ services:
       dockerfile: Dockerfile
       args:
         PUBLIC_API_URL: https://${API_DOMAIN:-localhost}
-    ports:
-      - "4321:4321"
+    expose:
+      - "4321"
     depends_on:
       backend:
         condition: service_healthy
