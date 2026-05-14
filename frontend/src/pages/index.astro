@@ -4,7 +4,8 @@ import Header from '../components/Header.astro';
 import CategoryFilter from '../components/CategoryFilter.astro';
 import Cart from '../components/Cart.astro';
 
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '../lib/api';
+const API_URL = API_BASE_URL;
 
 let categories: any[] = [];
 let config: Record<string, string> = {};

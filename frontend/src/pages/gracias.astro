@@ -1,7 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '../lib/api';
+const API_URL = API_BASE_URL;
 let storeName = 'WhatsUpShop';
 try {
   const res = await fetch(`${API_URL}/config`);

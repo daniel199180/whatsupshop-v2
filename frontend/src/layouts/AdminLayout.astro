@@ -1,12 +1,14 @@
 ---
 import '../styles/global.css';
 import '../styles/admin.css';
+import { API_BASE_URL } from '../lib/api';
 
 export interface Props {
   title?: string;
   currentPage?: string;
 }
 const { title = 'Admin — WhatsUpShop', currentPage = 'dashboard' } = Astro.props;
+const apiUrl = API_BASE_URL;
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', href: '/admin/dashboard', icon: 'chart' },
@@ -157,10 +159,8 @@ const navItems = [
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
   <!-- Admin Auth & Utilities -->
-  <script is:inline>
-    const API_URL = window.location.origin.includes('4321')
-      ? 'http://localhost:3000'
-      : (window.__API_URL || 'http://localhost:3000');
+  <!-- API_URL is injected from PUBLIC_API_URL at build time via define:vars -->
+  <script is:inline define:vars={{ API_URL: apiUrl }}>
 
     // Toast helper
     window.showToast = function(message, type = 'success') {

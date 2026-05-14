@@ -3,7 +3,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import Cart from '../../components/Cart.astro';
 
 const { slug } = Astro.params;
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '../../lib/api';
+const API_URL = API_BASE_URL;
 
 let product: any = null;
 let config: Record<string, string> = {};
@@ -221,5 +222,5 @@ const images = product?.moreImages ? [product.imageUrl, ...product.moreImages].f
     </div>
   )}
 
-  <Cart whatsappNumber={whatsappNumber} currency={currency} />
+  <Cart whatsappNumber={whatsappNumber} currency={currency} apiBase={API_URL} />
 </BaseLayout>
