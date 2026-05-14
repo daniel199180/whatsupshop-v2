@@ -4,7 +4,8 @@ export interface Props {
   currency?: string;
   apiBase?: string;
 }
-const { whatsappNumber, currency = 'BOB', apiBase = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000' } = Astro.props;
+import { API_BASE_URL } from '../lib/api';
+const { whatsappNumber, currency = 'BOB', apiBase = API_BASE_URL } = Astro.props;
 ---
 <!-- Cart Bar: Alpine.js state persisted in localStorage -->
 <div
