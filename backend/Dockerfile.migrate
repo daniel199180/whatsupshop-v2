@@ -1,13 +1,16 @@
-FROM oven/bun:1-debian
+FROM mysql:8.0
 
 WORKDIR /app
 
-# default-mysql-client on Debian bookworm installs MariaDB 10.11+, which
-# supports MySQL 8.0's caching_sha2_password auth plugin — unlike Alpine's
-# older MariaDB client. gzip compresses pre-migration backups.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends bash gzip default-mysql-client ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+# mysql:8.0 runs on Oracle Linux 8 slim — microdnf is the package manager.
+# curl + unzip are required by the Bun installer; gzip compresses backups.
+RUN microdnf install -y curl unzip gzip ca-certificates bash \
+  && microdnf clean all
+
+# Install Bun runtime.
+ENV BUN_INSTALL=/usr/local/bun
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/usr/local/bun/bin:${PATH}"
 
 COPY package.json bun.lock ./
 # Install all deps (including drizzle-kit in devDependencies).
@@ -20,7 +23,6 @@ COPY scripts ./scripts
 
 RUN chmod +x ./scripts/migrate.sh
 
-# One-shot container: runs migrate.sh and exits.
-# docker-compose depends_on condition: service_completed_successfully
-# ensures the backend only starts when this exits 0.
+# Clear MySQL's default ENTRYPOINT so we run migrate.sh, not mysqld.
+ENTRYPOINT []
 CMD ["bash", "./scripts/migrate.sh"]

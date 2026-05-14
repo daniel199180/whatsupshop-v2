@@ -50,6 +50,15 @@ until mysqladmin ping \
   if [[ $attempt -ge $MAX_ATTEMPTS ]]; then
     err "Could not connect to MySQL using DB_USER/DB_PASSWORD after ${MAX_ATTEMPTS} attempts."
     err ""
+    err "Real MySQL error:"
+    # Run once without stderr suppression to expose the actual MySQL error.
+    mysqladmin ping \
+      --host="${DB_HOST}" \
+      --port="${DB_PORT}" \
+      --user="${DB_USER}" \
+      --password="${DB_PASSWORD}" \
+      --silent 2>&1 || true
+    err ""
     err "Possible causes:"
     err "  1. mysql_data was created with different secrets (volume desync)."
     err "     app_secrets was deleted or regenerated after the DB was initialized."
@@ -62,8 +71,9 @@ until mysqladmin ping \
     err "  - TEST INSTALL (no real data): Delete BOTH mysql_data AND app_secrets"
     err "    volumes and redeploy from scratch."
     err ""
-    err "Check setup logs: docker compose logs setup"
-    err "Check DB logs:    docker compose logs db"
+    err "Check setup logs:        docker compose logs setup"
+    err "Check DB logs:           docker compose logs db"
+    err "Check db-user-init logs: docker compose logs db-user-init"
     exit 1
   fi
   log "  attempt ${attempt}/${MAX_ATTEMPTS} — retrying in 2s..."
